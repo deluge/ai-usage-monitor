@@ -1,0 +1,28 @@
+# OS generated files #
+######################
+.DS_Store*
+
+# Packages
+*.egg
+*.egg-info
+
+# Project Files #
+######################
+.venv/
+.ruff_cache/
+build/
+dist/
+*.cache
+*.pyc
+__pycache__/
+~*
+
+# Never commit your Claude login #
+##################################
+credentials.json
+.credentials.json
+*.tmp
+
+# Your own start script (see README, step 6) #
+###############################################
+show_my_usage.py

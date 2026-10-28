@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="640" viewBox="0 0 680 640" role="img">
+<title>OLED to Raspberry Pi wiring</title>
+<rect x="0" y="0" width="680" height="640" rx="12" fill="#FFFFFF"/>
+<rect x="180" y="24" width="320" height="96" rx="8" fill="none" stroke="#888780" stroke-width="1"/>
+<text x="340" y="50" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="600" fill="#2C2C2A">OLED display (pin header)</text>
+<rect x="196" y="72" width="36" height="30" rx="4" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="214" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#444441">GND</text>
+<rect x="238" y="72" width="36" height="30" rx="4" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/>
+<text x="256" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#791F1F">VCC</text>
+<rect x="280" y="72" width="36" height="30" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="298" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#0C447C">SCL</text>
+<rect x="322" y="72" width="36" height="30" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="340" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#085041">SDA</text>
+<rect x="364" y="72" width="36" height="30" rx="4" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+<text x="382" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#633806">RES</text>
+<rect x="406" y="72" width="36" height="30" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="424" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#3C3489">DC</text>
+<rect x="448" y="72" width="36" height="30" rx="4" fill="#FAECE7" stroke="#993C1D" stroke-width="1"/>
+<text x="466" y="91" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#712B13">CS</text>
+<text x="340" y="144" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#5F5E5A">Raspberry Pi GPIO header (40 pins) · pin 1 is at the SD card end</text>
+<rect x="305" y="156" width="70" height="446" rx="6" fill="none" stroke="#888780" stroke-width="1"/>
+<g><circle cx="325" cy="170" r="9" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/><text x="325" y="174" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#791F1F">1</text></g>
+<line x1="296" y1="170" x2="315" y2="170" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="146" y="160" width="150" height="20" rx="4" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1"/>
+<text x="221" y="174" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#791F1F">VCC · 3.3 V</text>
+<g opacity="0.4"><circle cx="355" cy="170" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="174" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">2</text></g>
+<g opacity="0.4"><circle cx="325" cy="192" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="196" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">3</text></g>
+<g opacity="0.4"><circle cx="355" cy="192" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="196" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">4</text></g>
+<g opacity="0.4"><circle cx="325" cy="214" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="218" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">5</text></g>
+<g><circle cx="355" cy="214" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="218" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">6</text></g>
+<line x1="365" y1="214" x2="384" y2="214" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="384" y="204" width="150" height="20" rx="4" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="459" y="218" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#444441">GND</text>
+<g opacity="0.4"><circle cx="325" cy="236" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="240" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">7</text></g>
+<g opacity="0.4"><circle cx="355" cy="236" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="240" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">8</text></g>
+<g opacity="0.4"><circle cx="325" cy="258" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="262" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">9</text></g>
+<g opacity="0.4"><circle cx="355" cy="258" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="262" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">10</text></g>
+<g opacity="0.4"><circle cx="325" cy="280" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="284" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">11</text></g>
+<g opacity="0.4"><circle cx="355" cy="280" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="284" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">12</text></g>
+<g opacity="0.4"><circle cx="325" cy="302" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="306" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">13</text></g>
+<g opacity="0.4"><circle cx="355" cy="302" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="306" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">14</text></g>
+<g opacity="0.4"><circle cx="325" cy="324" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="328" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">15</text></g>
+<g opacity="0.4"><circle cx="355" cy="324" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="328" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">16</text></g>
+<g opacity="0.4"><circle cx="325" cy="346" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="350" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">17</text></g>
+<g><circle cx="355" cy="346" r="9" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/><text x="355" y="350" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#3C3489">18</text></g>
+<line x1="365" y1="346" x2="384" y2="346" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="384" y="336" width="150" height="20" rx="4" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="459" y="350" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#3C3489">DC · GPIO24</text>
+<g><circle cx="325" cy="368" r="9" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/><text x="325" y="372" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#085041">19</text></g>
+<line x1="296" y1="368" x2="315" y2="368" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="146" y="358" width="150" height="20" rx="4" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="221" y="372" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#085041">SDA · GPIO10 (MOSI)</text>
+<g opacity="0.4"><circle cx="355" cy="368" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="372" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">20</text></g>
+<g opacity="0.4"><circle cx="325" cy="390" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="394" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">21</text></g>
+<g><circle cx="355" cy="390" r="9" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/><text x="355" y="394" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#633806">22</text></g>
+<line x1="365" y1="390" x2="384" y2="390" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="384" y="380" width="150" height="20" rx="4" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+<text x="459" y="394" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#633806">RES · GPIO25</text>
+<g><circle cx="325" cy="412" r="9" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/><text x="325" y="416" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#0C447C">23</text></g>
+<line x1="296" y1="412" x2="315" y2="412" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="146" y="402" width="150" height="20" rx="4" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="221" y="416" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#0C447C">SCL · GPIO11 (SCLK)</text>
+<g><circle cx="355" cy="412" r="9" fill="#FAECE7" stroke="#993C1D" stroke-width="1"/><text x="355" y="416" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#712B13">24</text></g>
+<line x1="365" y1="412" x2="384" y2="412" stroke="#888780" stroke-dasharray="2 2"/>
+<rect x="384" y="402" width="150" height="20" rx="4" fill="#FAECE7" stroke="#993C1D" stroke-width="1"/>
+<text x="459" y="416" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" fill="#712B13">CS · GPIO8 (CE0)</text>
+<g opacity="0.4"><circle cx="325" cy="434" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="438" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">25</text></g>
+<g opacity="0.4"><circle cx="355" cy="434" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="438" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">26</text></g>
+<g opacity="0.4"><circle cx="325" cy="456" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="460" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">27</text></g>
+<g opacity="0.4"><circle cx="355" cy="456" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="460" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">28</text></g>
+<g opacity="0.4"><circle cx="325" cy="478" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="482" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">29</text></g>
+<g opacity="0.4"><circle cx="355" cy="478" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="482" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">30</text></g>
+<g opacity="0.4"><circle cx="325" cy="500" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="504" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">31</text></g>
+<g opacity="0.4"><circle cx="355" cy="500" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="504" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">32</text></g>
+<g opacity="0.4"><circle cx="325" cy="522" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="526" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">33</text></g>
+<g opacity="0.4"><circle cx="355" cy="522" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="526" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">34</text></g>
+<g opacity="0.4"><circle cx="325" cy="544" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="548" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">35</text></g>
+<g opacity="0.4"><circle cx="355" cy="544" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="548" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">36</text></g>
+<g opacity="0.4"><circle cx="325" cy="566" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="570" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">37</text></g>
+<g opacity="0.4"><circle cx="355" cy="566" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="570" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">38</text></g>
+<g opacity="0.4"><circle cx="325" cy="588" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="325" y="592" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">39</text></g>
+<g opacity="0.4"><circle cx="355" cy="588" r="9" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/><text x="355" y="592" text-anchor="middle" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="10" fill="#444441">40</text></g>
+<path d="M388 428 L396 428 L396 594 L388 594" fill="none" stroke="#888780" stroke-width="1"/>
+<text x="406" y="515" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" fill="#5F5E5A">Pins 25–40 stay free</text>
+</svg>
