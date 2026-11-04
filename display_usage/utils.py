@@ -13,6 +13,13 @@ def log(message):
     print(message, file=sys.stderr, flush=True)
 
 
+def read_error_body(error, limit=500):
+    try:
+        return error.read().decode(errors="replace")[:limit]
+    except Exception:
+        return ""
+
+
 def load_font(size, names=("DejaVuSans.ttf", "DejaVuSans-Bold.ttf")):
     for name in names:
         path = FONT_DIRECTORY + name
