@@ -8,7 +8,7 @@
 //
 //  Two parts:
 //    BODY  - shell with the display mount and window (print upside down,
-//            flat top on the bed; the window top edge is a ~37 mm bridge)
+//            flat top on the bed; the window top edge is a ~40 mm bridge)
 //    PLATE - bottom plate with the Pi standoffs, press-fits into the body
 //
 //  part = "print"    -> both parts laid out for printing
@@ -19,7 +19,7 @@
 part = "print"; // [print, body, plate, assembly]
 
 /* [Shape] */
-face_angle = 110;   // angle between table and screen, 90 = upright, 110 = leaning back 20°
+face_angle = 125;   // angle between table and screen, 90 = upright, 125 = leaning back 35°
 cable_gap  = 10;    // extra free space between display back and Pi, for wiring
 pi_parts_h = 12;    // height of Pi header + wire stubs (used to keep clear of the display)
 
@@ -27,7 +27,7 @@ pi_parts_h = 12;    // height of Pi header + wire stubs (used to keep clear of t
 wall      = 2.0;   // wall thickness (also the thickness in front of the display)
 floor_t   = 2.0;   // bottom plate thickness
 cl        = 1.2;   // clearance between boards and inner walls
-fit       = 0.25;  // plate-lip fit tolerance per side (increase if too tight)
+fit       = 0.1;  // plate-lip fit tolerance per side (increase if too tight)
 lip_h     = 3.0;   // how high the plate lip reaches into the body
 lip_t     = 1.2;   // lip thickness
 vents     = true;  // ventilation slots in the plate
@@ -66,10 +66,13 @@ glass_w = 42.5;   // OLED glass panel size
 glass_d = 27.3;
 glass_h = 1.7;    // glass thickness (glass rests against the front wall)
 glass_off  = [0, 0];  // glass centre offset from PCB centre (+y = towards top of PCB)
-glass_border = 2.8;   // black border around the visible area on the glass
-active_w = glass_w - 2*glass_border;   // visible area 36.9 x 21.7
-active_d = glass_d - 2*glass_border;
-active_off = [0, 0];  // visible area centre offset from glass centre
+active_w = 36;        // visible area width
+active_d = 18;        // visible area height
+active_left = 3.0;    // visible area distance from the left glass edge
+active_top  = 2.5;    // visible area distance from the top glass edge
+// visible area centre offset from glass centre
+active_off = [active_left + active_w/2 - glass_w/2,
+              glass_d/2 - active_top - active_d/2];
 window_margin = 0.0;  // extra window size around the visible area
 // Display mounting holes: centre-to-centre spacing, centred on the board
 disp_hole_spacing = [37.5, 33.1];   // left-right, top-bottom
