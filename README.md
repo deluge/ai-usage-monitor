@@ -60,9 +60,11 @@ For the case (optional):
 
 The [`3Dprint`](3Dprint/) folder contains a 3D-printable desk case. It's a wedge: the display sits in the front face, which leans back 35° like a small monitor. The Pi lies flat on the bottom plate behind it, with its power port in the back wall. With the default settings the case is about 74 × 55 × 52 mm (W × D × H).
 
-![Printed case on a desk with the OLED in the front face](docs/displays/oled_m154_7p/case_printed.jpg)
+![Printed case on a desk, display off](docs/displays/oled_m154_7p/case1_printed.jpg)
 
-*The printed case.*
+![Printed case under a monitor, showing current and weekly usage](docs/displays/oled_m154_7p/case2_printed.jpg)
+
+*The printed case, switched off and in use.*
 
 ![Case body with display window and bottom plate with vents](docs/displays/oled_m154_7p/case1.png)
 
