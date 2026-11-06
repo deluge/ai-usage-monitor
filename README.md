@@ -54,7 +54,7 @@ The OLED is monochrome. The text color (white, blue, yellow, green…) is fixed 
 For the case (optional):
 
 - 3D printer
-- 4× M2.5 self-tapping screws (Pi), 4× M2 self-tapping screws (display)
+- 4× M2 screws or 4× M2.5 self-tapping screws (Pi), 4× M2 self-tapping screws (display)
 
 ## Case
 
