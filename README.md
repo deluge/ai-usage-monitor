@@ -1,6 +1,3 @@
-> [!WARNING]
-> **The case is still in progress.** I haven't printed it yet, so the [3D-printable case](#case) is untested and may still change.
-
 # AI Usage Monitor
 
 I built a small desk display for my Claude usage limits using a **Raspberry Pi Zero W** and a **1.54" OLED display (oled_m154_7p, 7-pin SPI, 128×64)**. Once the Pi boots and joins my Wi-Fi, it automatically shows my **current** (5-hour) and **weekly** usage, each with a progress bar and the time when it resets. No keyboard, monitor or browser needed.
@@ -48,7 +45,7 @@ Claude Code shows your limits with `/usage`. Behind that is an **undocumented** 
 - 1.54" OLED, 128×64, 7-pin SPI (SSD1309 controller; SSD1306 variants work with a one-line change)
 - microSD card, power supply, 7 female-to-female jumper wires (or soldered header)
 
-![1.54" OLED module oled_m154_7p, front and back](docs/display_oled_m154_7p.png)
+![1.54" OLED module oled_m154_7p, front and back](docs/displays/oled_m154_7p/display.png)
 
 *The display module used here (front and back). The back is labeled `OLED_M154_7P`.*
 
@@ -61,11 +58,15 @@ For the case (optional):
 
 ## Case
 
-The [`3Dprint`](3Dprint/) folder contains a 3D-printable desk case. It's a wedge: the display sits in the front face, which leans back 20° like a small monitor. The Pi lies flat on the bottom plate behind it, with its power port in the back wall. With the default settings the case is about 74 × 55 × 52 mm (W × D × H).
+The [`3Dprint`](3Dprint/) folder contains a 3D-printable desk case. It's a wedge: the display sits in the front face, which leans back 35° like a small monitor. The Pi lies flat on the bottom plate behind it, with its power port in the back wall. With the default settings the case is about 74 × 55 × 52 mm (W × D × H).
 
-![Case body with display window and bottom plate with vents](docs/case1.png)
+![Printed case on a desk with the OLED in the front face](docs/displays/oled_m154_7p/case_printed.jpg)
 
-![Inside of the case body: display mount with screw posts, power port opening](docs/case2.png)
+*The printed case.*
+
+![Case body with display window and bottom plate with vents](docs/displays/oled_m154_7p/case1.png)
+
+![Inside of the case body: display mount with screw posts, power port opening](docs/displays/oled_m154_7p/case2.png)
 
 ## Setup
 
