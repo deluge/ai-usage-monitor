@@ -39,16 +39,19 @@ Claude Code shows your limits with `/usage`. Behind that is an **undocumented** 
 
 | File | Purpose |
 |---|---|
-| `display_usage/` | Raspberry Pi code (Python 3) |
 | `display_usage/monitor.py` | `UsageMonitor`: fetches the usage and keeps the display updated |
 | `display_usage/api.py` | `ClaudeApi`: credentials, token refresh and usage requests |
-| `display_usage/display.py` | `Oled_m154_7p`: OLED setup and drawing |
-| `display_usage/utils.py` | Shared helpers: logging, font loading, reset time formatting |
-| `esp32/display_usage/` | ESP32 code (MicroPython), same classes as the Pi version plus `Wifi` (`wifi.py`) and `Timezone` (`utils.py`) |
-| `esp32/display_usage/dejavu_sans_*.py` | DejaVu Sans as bitmap fonts for the ESP32 (generated) |
-| `esp32/make_fonts.py` | Generates the ESP32 bitmap fonts from `DejaVuSans.ttf` |
+| `display_usage/display.py` | `BaseDisplay`: the screen layout, drawn with a few primitives each board implements |
+| `display_usage/utils.py` | Shared helpers: logging, time and `Timezone`, reset time formatting |
+| `display_usage/errors.py` | Exceptions shared by the modules above |
+| `display_usage/pizerow/display.py` | `Oled_m154_7p` for the Raspberry Pi (luma.oled, TrueType fonts) |
+| `display_usage/esp32/display.py` | `Oled_m154_7p` for the ESP32 (MicroPython's `ssd1306` driver) |
+| `display_usage/esp32/wifi.py` | `Wifi`: Wi-Fi connection and clock sync on the ESP32 |
+| `display_usage/esp32/font.py` | `BitmapFont`: draws the bitmap fonts below |
+| `display_usage/esp32/dejavu_sans_*.py` | DejaVu Sans as bitmap fonts for the ESP32 (generated) |
+| `tools/make_esp32_fonts.py` | Generates the ESP32 bitmap fonts from `DejaVuSans.ttf` |
 | `show_my_usage.py` | Your own Pi start script with your settings (not in git) |
-| `esp32/main.py` | Your own ESP32 start script with your settings (not in git) |
+| `main.py` | Your own ESP32 start script with your settings (not in git) |
 | `credentials.example.json` | Shape of the credentials file |
 | `pyproject.toml` / `uv.lock` | Development tools and settings (managed with [uv](https://docs.astral.sh/uv/)); the boards don't use them |
 | `Makefile` | Shortcuts for formatting and checking code (`make help`) |
@@ -102,7 +105,7 @@ You only need to copy the credentials again if the board was off for a long time
 
 ## Configuration
 
-All settings are passed to the classes in your start script (`show_my_usage.py` on the Pi, `main.py` on the ESP32). These settings are the same on both boards; the display and board settings are listed in the board guides.
+All settings are passed to the classes in your start script (`show_my_usage.py` on the Pi, `main.py` on the ESP32). These settings are the same on both boards; the display and Wi-Fi settings are listed in the board guides.
 
 **`ClaudeApi`**
 
@@ -115,8 +118,16 @@ All settings are passed to the classes in your start script (`show_my_usage.py` 
 
 | Setting | Default | Meaning |
 |---|---|---|
+| `wifi` | `None` | The `Wifi` connection on the ESP32; not needed on the Pi |
 | `api_request_interval` | `120` | Seconds between API requests (don't go too low) |
 | `display_refresh_interval` | `30` | Seconds between screen redraws (updates the countdown) |
+
+**`Timezone`** (passed to `Oled_m154_7p` as `timezone`)
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `utc_offset` | `None` | Your standard (winter) time offset from UTC in hours, e.g. `1` for Germany, `-5` for New York, `5.5` for India. `None` uses the system's timezone, which is right on the Pi; the ESP32 has none, so set it there |
+| `dst` | `None` | Summer time rule: `"eu"` (last Sunday in March to last Sunday in October), `"us"` (second Sunday in March to first Sunday in November) or `None` |
 
 ## Troubleshooting
 
@@ -127,7 +138,7 @@ These apply to both boards. See the board guides for wiring, network and startup
 | `No credentials` | File missing | Put the credentials on the board (see the board guide) |
 | `HTTP 403` | `setup-token` used, or request blocked | Use the `claudeAiOauth` login credentials ([see above](#get-your-claude-login-credentials)) |
 | `HTTP 401` | Token invalid or expired | Copy fresh credentials, set `expiresAt` to `0`, restart |
-| `Token refresh at …: HTTP 404` in the log | Anthropic changed the refresh URL | Update `TOKEN_URLS` in `api.py` (both versions) |
+| `Token refresh at …: HTTP 404` in the log | Anthropic changed the refresh URL | Update `TOKEN_URLS` in `display_usage/api.py` |
 
 ## Development
 
@@ -140,10 +151,18 @@ make check        # check formatting and lint rules (same as the GitHub workflow
 make correct      # fix formatting and lint issues
 ```
 
-The checks cover the Pi and the ESP32 code. The two versions share their structure, so a change to one usually belongs in the other as well.
+### Code structure
 
-MicroPython can't read TTF fonts, so the ESP32 uses DejaVu Sans pre-rendered as bitmaps (`esp32/display_usage/dejavu_sans_*.py`). They are rendered with Pillow the same way the Pi draws text, so both displays show the same pixels. To regenerate them, e.g. after changing the font sizes, download `DejaVuSans.ttf` and run:
+Both boards run the same code. Everything in `display_usage/` runs on the Pi (Python 3) and on the ESP32 (MicroPython), so it only uses what MicroPython supports (no `datetime`, `threading` or `os.path`). Only the hardware-specific parts live in `display_usage/pizerow/` and `display_usage/esp32/`:
+
+- `ClaudeApi` uses `requests`, which both Python 3 and MicroPython provide with the same interface.
+- `UsageMonitor` runs one loop that fetches and redraws; on the ESP32 it also keeps the `Wifi` connected.
+- `BaseDisplay` draws the whole screen with five primitives (`clear`, `show`, `text`, `textlength`, `rectangle`). Each board's `Oled_m154_7p` implements them for its display driver. To support another display or board, write such a subclass.
+
+### ESP32 fonts
+
+MicroPython can't read TTF fonts, so the ESP32 uses DejaVu Sans pre-rendered as bitmaps (`display_usage/esp32/dejavu_sans_*.py`). They are rendered with Pillow the same way the Pi draws text, so both displays show the same pixels. The sizes come from `BaseDisplay.FONT_SIZE` and `SMALL_FONT_SIZE`. To regenerate them after changing those, download `DejaVuSans.ttf` and run from the project folder:
 
 ```bash
-uv run --no-project --with pillow python esp32/make_fonts.py /path/to/DejaVuSans.ttf
+uv run --no-project --with pillow python -B -m tools.make_esp32_fonts /path/to/DejaVuSans.ttf
 ```

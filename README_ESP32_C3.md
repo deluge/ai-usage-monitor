@@ -2,7 +2,7 @@
 
 This guide covers the ESP32-C3 specific steps. Everything both boards have in common (what the display shows, the credentials, sharing the login, common settings) is in the main [README](README.md).
 
-The ESP32 runs [MicroPython](https://micropython.org/). The code in [`esp32/display_usage/`](esp32/display_usage/) has the same classes as the Pi version (`ClaudeApi`, `Oled_m154_7p`, `UsageMonitor`), plus `Wifi` for the network connection and `Timezone`, because the ESP32 has no timezone database. It brings the Pi's font (DejaVu Sans) along as bitmaps, so the display looks exactly the same.
+The ESP32 runs [MicroPython](https://micropython.org/) and the same code as the Pi ([`display_usage/`](display_usage/)). Only the display driver and the Wi-Fi connection are ESP32-specific ([`display_usage/esp32/`](display_usage/esp32/)). It brings the Pi's font (DejaVu Sans) along as bitmaps, so the display looks exactly the same.
 
 ## Hardware
 
@@ -15,7 +15,7 @@ There is no 3D-printable case for the ESP32 yet; the [Pi case](README_RASPBERRY_
 
 ## Differences from the Pi version
 
-- **Time:** The clock is set from the internet (NTP) and the timezone is set in your start script (see [`Timezone`](#configuration)).
+- **Time:** The clock is set from the internet (NTP) and the timezone is set in your start script (see [`Timezone`](README.md#configuration)).
 - **Security:** MicroPython's `requests` doesn't verify TLS certificates. Someone who controls your network could intercept the connection and read your Claude login. Only use the ESP32 on a network you trust. The credentials are also stored unencrypted in the ESP32's flash, so anyone who can plug into its USB port can read them.
 
 ## Setup
@@ -54,13 +54,13 @@ GPIO6, 7 and 10 are the C3's native SPI pins. GPIO2, 8 and 9 stay free on purpos
 
 ```bash
 git clone https://github.com/deluge/ai-usage-monitor.git ~/ai-usage-monitor
-cd ~/ai-usage-monitor/esp32
+cd ~/ai-usage-monitor
 
 mpremote mip install ssd1306
 mpremote cp -r display_usage :
 ```
 
-`mip install ssd1306` installs the OLED driver; the `requests` and `ntptime` modules the code also needs are part of the MicroPython firmware.
+`mip install ssd1306` installs the OLED driver; the `requests` and `ntptime` modules the code also needs are part of the MicroPython firmware. The `display_usage/pizerow/` folder is copied along but never used on the ESP32.
 
 ### 4. Get your Claude login credentials
 
@@ -68,7 +68,7 @@ Follow [Get your Claude login credentials](README.md#get-your-claude-login-crede
 
 ### 5. Put the credentials on the ESP32
 
-Save the credentials as `credentials.json` in the `esp32` folder (the `.gitignore` excludes it), change the value after `"expiresAt":` to `0`, then copy the file to the board and delete the local copy:
+Save the credentials as `credentials.json` in the project folder (the `.gitignore` excludes it), change the value after `"expiresAt":` to `0`, then copy the file to the board and delete the local copy:
 
 ```bash
 mpremote cp credentials.json :credentials.json
@@ -77,20 +77,20 @@ rm credentials.json
 
 ### 6. Create your start script
 
-MicroPython runs `main.py` automatically when the board powers up. Create it in the `esp32` folder (listed in `.gitignore`, so `git pull` never overwrites it):
+MicroPython runs `main.py` automatically when the board powers up. Create it in the project folder (listed in `.gitignore`, so `git pull` never overwrites it):
 
 ```bash
-nano ~/ai-usage-monitor/esp32/main.py
+nano ~/ai-usage-monitor/main.py
 ```
 
 Paste the following content, enter your Wi-Fi name and password, set your timezone and save:
 
 ```python
 from display_usage.api import ClaudeApi
-from display_usage.display import Oled_m154_7p
+from display_usage.esp32.display import Oled_m154_7p
+from display_usage.esp32.wifi import Wifi
 from display_usage.monitor import UsageMonitor
 from display_usage.utils import Timezone
-from display_usage.wifi import Wifi
 
 
 wifi = Wifi("my-wifi-name", "my-wifi-password")
@@ -131,7 +131,6 @@ Follow [Log in again on your computer](README.md#log-in-again-on-your-computer) 
 ```bash
 cd ~/ai-usage-monitor
 git pull
-cd esp32
 mpremote cp -r display_usage : + reset
 ```
 
@@ -141,7 +140,7 @@ Your `main.py` and `credentials.json` on the board stay untouched.
 
 All settings are in your `main.py` (step 6). Copy it to the board again after a change (`mpremote cp main.py :main.py + reset`).
 
-The `ClaudeApi` and `UsageMonitor` settings are listed in the [main README](README.md#configuration).
+The `ClaudeApi`, `UsageMonitor` and `Timezone` settings are listed in the [main README](README.md#configuration). Set the `Timezone`: the ESP32 has no timezone database, so without it the reset times are shown in UTC.
 
 **`Wifi`**
 
@@ -152,18 +151,11 @@ The `ClaudeApi` and `UsageMonitor` settings are listed in the [main README](READ
 | `hostname` | `usage-monitor` | Name of the ESP32 in your network |
 | `tx_power` | `None` | Wi-Fi transmit power in dBm; try `8.5` if the board doesn't connect (see [Troubleshooting](#troubleshooting)) |
 
-**`Timezone`** (passed to `Oled_m154_7p` as `timezone`)
-
-| Setting | Default | Meaning |
-|---|---|---|
-| `utc_offset` | `0` | Your standard (winter) time offset from UTC in hours, e.g. `1` for Germany, `-5` for New York, `5.5` for India |
-| `dst` | `None` | Summer time rule: `"eu"` (last Sunday in March to last Sunday in October), `"us"` (second Sunday in March to first Sunday in November) or `None` |
-
 **`Oled_m154_7p`**
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `timezone` | `Timezone()` (UTC) | Timezone for the reset times |
+| `timezone` | `Timezone()` (UTC on the ESP32) | Timezone for the reset times |
 | `contrast` | `200` | Display brightness (0–255) |
 | `flip` | `False` | `True` turns the picture upside down |
 | `gpio_clock` | `6` | GPIO of the SCL pin |

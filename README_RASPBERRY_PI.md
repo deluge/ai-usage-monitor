@@ -46,7 +46,7 @@ Pins 25–40 stay free. The pin order on the display itself can differ between s
 ```bash
 sudo raspi-config nonint do_spi 0
 sudo apt update
-sudo apt install -y git fonts-dejavu-core python3-luma.core python3-luma.oled
+sudo apt install -y git fonts-dejavu-core python3-luma.core python3-luma.oled python3-requests
 
 git clone https://github.com/deluge/ai-usage-monitor.git ~/ai-usage-monitor
 ```
@@ -79,8 +79,8 @@ Paste the following content and save. It uses the default for every setting:
 
 ```python
 from display_usage.api import ClaudeApi
-from display_usage.display import Oled_m154_7p
 from display_usage.monitor import UsageMonitor
+from display_usage.pizerow.display import Oled_m154_7p
 
 
 api = ClaudeApi()
@@ -145,12 +145,13 @@ Follow [Log in again on your computer](README.md#log-in-again-on-your-computer) 
 
 All settings are in your `show_my_usage.py` (step 6). Restart the service after a change: `sudo systemctl restart usage-monitor`.
 
-The `ClaudeApi` and `UsageMonitor` settings are listed in the [main README](README.md#configuration).
+The `ClaudeApi`, `UsageMonitor` and `Timezone` settings are listed in the [main README](README.md#configuration).
 
 **`Oled_m154_7p`**
 
 | Setting | Default | Meaning |
 |---|---|---|
+| `timezone` | `Timezone()` (system timezone) | Timezone for the reset times |
 | `controller` | `ssd1309` | Display controller; use `ssd1306` if the display stays black |
 | `contrast` | `200` | Display brightness (0–255) |
 | `rotate` | `0` | Rotation in steps of 90°; `2` turns the picture upside down |

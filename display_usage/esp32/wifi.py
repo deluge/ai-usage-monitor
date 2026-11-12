@@ -3,6 +3,7 @@ import time
 import network
 import ntptime
 
+from display_usage.errors import WifiError
 from display_usage.utils import log
 
 
@@ -11,10 +12,6 @@ WIFI_ERRORS = {
     network.STAT_WRONG_PASSWORD: "Wrong password",
     network.STAT_NO_AP_FOUND: "Not found",
 }
-
-
-class WifiError(Exception):
-    pass
 
 
 class Wifi:
@@ -29,11 +26,12 @@ class Wifi:
         self.last_clock_sync = None
 
     def connect(self):
-        """Start connecting if needed and return True once connected.
+        """Start connecting if needed and return True once connected and the clock is set.
 
         Raises WifiError if the last attempt failed for a known reason.
         """
         if self.wlan.isconnected():
+            self.sync_clock()
             return True
         status = self.wlan.status()
         if status == network.STAT_CONNECTING:

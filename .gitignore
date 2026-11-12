@@ -29,4 +29,4 @@ show_my_usage.py
 
 # Your own ESP32 start script (see README_ESP32_C3.md, step 6) #
 #################################################################
-esp32/main.py
+/main.py
