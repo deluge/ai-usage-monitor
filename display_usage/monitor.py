@@ -1,9 +1,7 @@
-import os
-import threading
 import time
-import urllib.error
 
-from display_usage.utils import log, read_error_body
+from display_usage.errors import CredentialsMissing, HttpError, WifiError
+from display_usage.utils import log
 
 
 # Retry wait times in seconds.
@@ -12,40 +10,46 @@ AUTH_RETRY_DELAYS = (10, 20, 60)
 API_ERROR_RETRY_DELAY = 60
 NO_CREDENTIALS_RETRY_DELAY = 30
 NETWORK_ERROR_RETRY_DELAY = 15
+WIFI_ERROR_RETRY_DELAY = 15
+WIFI_WAIT_DELAY = 1
+FRAME_DELAY = 0.5  # speed of the loading animation
 
 
 class UsageMonitor:
-    def __init__(self, api, oled, api_request_interval=120, display_refresh_interval=30):
+    def __init__(
+        self, api, oled, wifi=None, api_request_interval=120, display_refresh_interval=30
+    ):
         self.api = api
         self.oled = oled
+        self.wifi = wifi
         self.api_request_interval = api_request_interval
         self.display_refresh_interval = display_refresh_interval
-        self.state = {"usage": None, "error": None, "fatal": False}
-        self.lock = threading.Lock()
+        self.usage = None
+        self.error = None
+        self.fatal = False
         self.auth_failures = 0
-
-    def fetch_loop(self):
-        while True:
-            time.sleep(self.fetch_once())
 
     def fetch_once(self):
         """Fetch usage once and return how many seconds to wait before the next fetch."""
         try:
+            if self.wifi and not self.wifi.connect():
+                return WIFI_WAIT_DELAY
             usage = self.api.fetch_usage()
-        except urllib.error.HTTPError as error:
+        except HttpError as error:
             return self.handle_http_error(error)
-        except FileNotFoundError:
+        except CredentialsMissing:
             return self.handle_missing_credentials()
-        except Exception as error:  # no Wi-Fi yet, timeout, ...
+        except WifiError as error:
+            return self.handle_wifi_error(error)
+        except Exception as error:  # no network yet, timeout, ...
             return self.handle_network_error(error)
 
         self.auth_failures = 0
-        with self.lock:
-            self.state["usage"], self.state["error"] = usage, None
+        self.usage, self.error = usage, None
         return self.api_request_interval
 
     def handle_http_error(self, error):
-        log(f"HTTP {error.code} from {error.url}: {read_error_body(error)}")
+        log(f"HTTP {error.code} from {error.url}: {error.body}")
         if error.code not in (401, 403):
             self.show_fatal_error("API error", f"HTTP {error.code}", "")
             return API_ERROR_RETRY_DELAY
@@ -59,46 +63,46 @@ class UsageMonitor:
         return delay
 
     def handle_missing_credentials(self):
-        directory, filename = os.path.split(self.api.credentials_file)
-        directory = directory.replace(os.path.expanduser("~"), "~", 1) + "/"
-        self.show_fatal_error("No credentials", directory, filename)
+        directory, _, filename = self.api.credentials_file.rpartition("/")
+        self.show_fatal_error("No credentials", directory + "/" if directory else "", filename)
         return NO_CREDENTIALS_RETRY_DELAY
+
+    def handle_wifi_error(self, error):
+        log(f"Wi-Fi {self.wifi.ssid}: {error}")
+        self.show_fatal_error("Wi-Fi error", self.wifi.ssid, str(error))
+        return WIFI_ERROR_RETRY_DELAY
 
     def handle_network_error(self, error):
         log(f"Network error: {error}")
-        with self.lock:
-            if self.state["usage"] is None:
-                self.state["error"] = ("No network?", str(error)[:20])
+        if self.usage is None:
+            self.error = ("No network?", str(error)[:20])
         return NETWORK_ERROR_RETRY_DELAY
 
     def show_fatal_error(self, *lines):
-        with self.lock:
-            self.state["error"] = lines
-            self.state["fatal"] = True
+        self.error = lines
+        self.fatal = True
 
     def render_usage(self):
-        with self.lock:
-            usage, error = self.state["usage"], self.state["error"]
-        if usage is not None:
-            self.oled.show_usage(usage)
-        elif error:
-            self.oled.show_message(*error)
+        if self.usage is not None:
+            self.oled.show_usage(self.usage)
+        elif self.error:
+            self.oled.show_message(*self.error)
         else:
             self.oled.show_loading()
 
-    def loading_screen(self):
-        dots = 1
-        while True:
-            with self.lock:
-                if self.state["usage"] is not None or self.state["fatal"]:
-                    return
-            self.oled.show_loading(dots)
-            dots = dots % 3 + 1
-            time.sleep(0.5)
-
     def run(self):
-        threading.Thread(target=self.fetch_loop, daemon=True).start()
-        self.loading_screen()
+        dots = 1
+        fetch_in = render_in = 0  # seconds until the next fetch / redraw
         while True:
-            self.render_usage()
-            time.sleep(self.display_refresh_interval)
+            if fetch_in <= 0:
+                fetch_in = self.fetch_once()
+                render_in = 0  # show the new data or error right away
+            if self.usage is None and not self.fatal:
+                self.oled.show_loading(dots)
+                dots = dots % 3 + 1
+            elif render_in <= 0:
+                self.render_usage()
+                render_in = self.display_refresh_interval
+            time.sleep(FRAME_DELAY)
+            fetch_in -= FRAME_DELAY
+            render_in -= FRAME_DELAY
