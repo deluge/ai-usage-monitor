@@ -1,10 +1,21 @@
 # AI Usage Monitor
 
-I built a small desk display for my Claude usage limits using a **Raspberry Pi Zero W** and a **1.54" OLED display (oled_m154_7p, 7-pin SPI, 128×64)**. Once the Pi boots and joins my Wi-Fi, it automatically shows my **current** (5-hour) and **weekly** usage, each with a progress bar and the time when it resets. No keyboard, monitor or browser needed.
+I built a small desk display for my Claude usage limits using a **1.54" OLED display (oled_m154_7p, 7-pin SPI, 128×64)**, driven either by a **Raspberry Pi Zero W** or an **ESP32-C3 Super Mini**. Once the board starts and joins my Wi-Fi, it automatically shows my **current** (5-hour) and **weekly** usage, each with a progress bar and the time when it resets. No keyboard, monitor or browser needed.
 
 ![Display preview: loading screen and usage screen](docs/preview.png)
 
-*Left to right: loading screen at boot and the usage display.*
+*Left to right: loading screen at boot and the usage display (Raspberry Pi version).*
+
+## Choose your board
+
+This README covers everything both boards have in common. The board-specific steps (hardware, wiring, installation, configuration) are in separate guides:
+
+| Board | Runs | Guide |
+|---|---|---|
+| Raspberry Pi Zero W / Zero 2 W | Python 3 on Raspberry Pi OS, started by systemd | [README_RASPBERRY_PI.md](README_RASPBERRY_PI.md) |
+| ESP32-C3 Super Mini | MicroPython, starts on power-up | [README_ESP32_C3.md](README_ESP32_C3.md) |
+
+The Pi version is easier to debug over SSH and has a 3D-printable case. The ESP32 is cheaper, smaller, uses less power and is ready a few seconds after you plug it in.
 
 ## What it shows
 
@@ -15,35 +26,41 @@ I built a small desk display for my Claude usage limits using a **Raspberry Pi Z
 | `Weekly 18%` | Usage of the rolling 7-day window |
 | `Reset Thu 29.10. 09:00` | When the weekly limit resets |
 
-The values are fetched every 2 minutes. Until the first data arrives, the display shows `Loading...`.
+The values are fetched every 2 minutes. Until the first data arrives, the display shows `Loading...`. Both boards use the same font (DejaVu Sans) and layout, so the display looks the same on either.
 
 ## How it works
 
-Claude Code shows your limits with `/usage`. Behind that is an **undocumented** endpoint (`https://api.anthropic.com/api/oauth/usage`) that returns the same numbers. The script calls this endpoint with your Claude login credentials and keeps the login fresh by refreshing the token itself.
+Claude Code shows your limits with `/usage`. Behind that is an **undocumented** endpoint (`https://api.anthropic.com/api/oauth/usage`) that returns the same numbers. The board calls this endpoint with your Claude login credentials and keeps the login fresh by refreshing the token itself.
 
 > [!CAUTION]
-> This is not an official Anthropic API and this project is not affiliated with Anthropic. The endpoint may change or disappear at any time, which would break the display until the script is updated. It only works with Claude subscription plans (Pro/Max), not with API keys.
+> This is not an official Anthropic API and this project is not affiliated with Anthropic. The endpoint may change or disappear at any time, which would break the display until the code is updated. It only works with Claude subscription plans (Pro/Max), not with API keys.
 
 ## Repository contents
 
 | File | Purpose |
 |---|---|
+| `display_usage/` | Raspberry Pi code (Python 3) |
 | `display_usage/monitor.py` | `UsageMonitor`: fetches the usage and keeps the display updated |
 | `display_usage/api.py` | `ClaudeApi`: credentials, token refresh and usage requests |
 | `display_usage/display.py` | `Oled_m154_7p`: OLED setup and drawing |
 | `display_usage/utils.py` | Shared helpers: logging, font loading, reset time formatting |
-| `show_my_usage.py` | Your own start script with your settings (you create it in step 6, not in git) |
+| `esp32/display_usage/` | ESP32 code (MicroPython), same classes as the Pi version plus `Wifi` (`wifi.py`) and `Timezone` (`utils.py`) |
+| `esp32/display_usage/dejavu_sans_*.py` | DejaVu Sans as bitmap fonts for the ESP32 (generated) |
+| `esp32/make_fonts.py` | Generates the ESP32 bitmap fonts from `DejaVuSans.ttf` |
+| `show_my_usage.py` | Your own Pi start script with your settings (not in git) |
+| `esp32/main.py` | Your own ESP32 start script with your settings (not in git) |
 | `credentials.example.json` | Shape of the credentials file |
-| `pyproject.toml` / `uv.lock` | Development tools and settings (managed with [uv](https://docs.astral.sh/uv/)); the Pi uses Debian's system packages |
+| `pyproject.toml` / `uv.lock` | Development tools and settings (managed with [uv](https://docs.astral.sh/uv/)); the boards don't use them |
 | `Makefile` | Shortcuts for formatting and checking code (`make help`) |
-| `3Dprint/pizero_oled154_case.scad` | OpenSCAD source of the case (adjustable) |
-| `3Dprint/pizero_oled154_case.stl` | Ready-to-print case (body and bottom plate) |
+| `3Dprint/pizero_oled154_case.scad` | OpenSCAD source of the Pi case (adjustable) |
+| `3Dprint/pizero_oled154_case.stl` | Ready-to-print Pi case (body and bottom plate) |
 
-## Hardware
+## The display
 
-- Raspberry Pi Zero W or Zero 2 W (the plain Zero has no Wi-Fi)
-- 1.54" OLED, 128×64, 7-pin SPI (SSD1309 controller; SSD1306 variants work with a one-line change)
-- microSD card, power supply, 7 female-to-female jumper wires (or soldered header)
+Both boards use the same display:
+
+- 1.54" OLED, 128×64, 7-pin SPI (SSD1309 controller; SSD1306 variants work too)
+- 7 female-to-female jumper wires (or soldered header)
 
 ![1.54" OLED module oled_m154_7p, front and back](docs/displays/oled_m154_7p/display.png)
 
@@ -51,52 +68,11 @@ Claude Code shows your limits with `/usage`. Behind that is an **undocumented** 
 
 The OLED is monochrome. The text color (white, blue, yellow, green…) is fixed by the display you buy and cannot be changed in software.
 
-For the case (optional):
+The pin order on the display can differ between sellers, so always wire by the labels printed on your board: `GND`, `VCC`, `SCL` (SPI clock), `SDA` (SPI data), `RES` (reset), `DC` (data/command) and `CS` (chip select). Power it with **3.3 V**.
 
-- 3D printer
-- 4× M2 screws or 4× M2.5 self-tapping screws (Pi), 4× M2 self-tapping screws (display)
+## Get your Claude login credentials
 
-## Case
-
-The [`3Dprint`](3Dprint/) folder contains a 3D-printable desk case. It's a wedge: the display sits in the front face, which leans back 35° like a small monitor. The Pi lies flat on the bottom plate behind it, with its power port in the back wall. With the default settings the case is about 74 × 55 × 52 mm (W × D × H).
-
-![Printed case on a desk, display off](docs/displays/oled_m154_7p/case1_printed.jpg)
-
-![Printed case under a monitor, showing current and weekly usage](docs/displays/oled_m154_7p/case2_printed.jpg)
-
-*The printed case, switched off and in use.*
-
-![Case body with display window and bottom plate with vents](docs/displays/oled_m154_7p/case1.png)
-
-![Inside of the case body: display mount with screw posts, power port opening](docs/displays/oled_m154_7p/case2.png)
-
-## Setup
-
-### 1. Set up the Raspberry Pi
-
-Your Raspberry Pi must already be set up, and you need an SSH connection to it.
-
-### 2. Wire the display
-
-Pin 1 of the Pi header is the corner pin on the SD-card end of the board. Odd pins are on the inner row, even pins on the outer edge.
-
-![Wiring diagram: OLED pins to the 40-pin Raspberry Pi header](docs/wiring.svg)
-
-Pins 25–40 stay free. The pin order on the display itself can differ between sellers, so go by the labels printed on your board.
-
-### 3. Install the software
-
-```bash
-sudo raspi-config nonint do_spi 0
-sudo apt update
-sudo apt install -y git fonts-dejavu-core python3-luma.core python3-luma.oled
-
-git clone https://github.com/deluge/ai-usage-monitor.git ~/ai-usage-monitor
-```
-
-The script runs with the system-wide `python3`, so the Python packages are installed with `apt` (via `sudo`) instead of a virtual environment.
-
-### 4. Get your Claude login credentials
+Both boards need a copy of your Claude login. The board guides tell you when to do this.
 
 You need [Claude Code](https://claude.com/claude-code) on your computer, logged in with your Claude account (run `claude`, then `/login`). A token from `claude setup-token` does **not** work: it lacks the permission for usage data and returns HTTP 403.
 
@@ -109,124 +85,31 @@ Read the stored credentials on your computer:
 - **Windows**: `%USERPROFILE%\.claude\.credentials.json` (hidden file; in PowerShell: `notepad $env:USERPROFILE\.claude\.credentials.json`)
 - **Linux**: `cat ~/.claude/.credentials.json`
 
-The output is a JSON object containing `claudeAiOauth`.
+The output is a JSON object containing `claudeAiOauth`. When you put it on the board, change the value after `"expiresAt":` to `0`. This makes the board refresh the token right away, so it gets its own login (see [Sharing the login](#sharing-the-login-between-board-and-computer)). The result looks like `credentials.example.json`.
 
 > [!IMPORTANT]
 > These credentials give full access to your Claude account. Never commit them to Git or share them. The `.gitignore` excludes `credentials.json`.
 
-### 5. Put the credentials on the Pi
+## Log in again on your computer
 
-```bash
-mkdir -p ~/.usage-monitor
-nano ~/.usage-monitor/credentials.json
-chmod 600 ~/.usage-monitor/credentials.json
-```
+Once the board has refreshed its token (the display shows your usage), open Claude Code on your computer and run `/login` once. Use `/login`, not `/logout`, since logging out may revoke the shared session.
 
-In the file, change the value after `"expiresAt":` to `0`. This makes the Pi refresh the token right away, so it gets its own login (see [Sharing the login](#sharing-the-login-between-pi-and-computer)). The result looks like `credentials.example.json`.
+## Sharing the login between board and computer
 
-### 6. Create your start script
+Both devices start out with the same login. When one of them refreshes the token, the other one's copy becomes invalid. Setting `expiresAt` to `0` lets the board refresh first; a fresh `/login` on the computer then gives the computer its own session. After that, both run independently.
 
-`show_my_usage.py` in the project folder starts the display with your own settings. It is listed in `.gitignore`, so `git pull` never overwrites it. Create it:
-
-```bash
-nano ~/ai-usage-monitor/show_my_usage.py
-```
-
-Paste the following content and save. It uses the default for every setting:
-
-```python
-from display_usage.api import ClaudeApi
-from display_usage.display import Oled_m154_7p
-from display_usage.monitor import UsageMonitor
-
-
-api = ClaudeApi()
-oled = Oled_m154_7p()
-
-monitor = UsageMonitor(api, oled)
-monitor.run()
-```
-
-To change a setting, pass it to the class. All settings and their defaults are listed under [Configuration](#configuration). For example:
-
-```python
-oled = Oled_m154_7p(contrast=100, rotate=2)
-```
-
-Test it (Ctrl+C to stop):
-
-```bash
-cd ~/ai-usage-monitor
-python3 show_my_usage.py
-```
-
-### 7. Start on boot
-
-Create the service file:
-
-```bash
-sudo nano /etc/systemd/system/usage-monitor.service
-```
-
-Paste the following content, replace every `pi` with your username on the Pi, and save:
-
-```ini
-[Unit]
-Description=Claude usage on OLED
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-User=pi
-WorkingDirectory=/home/pi/ai-usage-monitor
-ExecStart=/usr/bin/python3 /home/pi/ai-usage-monitor/show_my_usage.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Then enable and start the service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now usage-monitor
-```
-
-### 8. Log in again on your computer
-
-Once the Pi has refreshed its token, open Claude Code on your computer and run `/login` once. Use `/login`, not `/logout`, since logging out may revoke the shared session.
-
-## Sharing the login between Pi and computer
-
-Both devices start out with the same login. When one of them refreshes the token, the other one's copy becomes invalid. Setting `expiresAt` to `0` lets the Pi refresh first; a fresh `/login` on the computer then gives the computer its own session. After that, both run independently.
-
-You only need to copy the credentials again if the Pi was off for a long time (weeks), or if you change your password or log out everywhere. The display will show `HTTP 401` in that case.
+You only need to copy the credentials again if the board was off for a long time (weeks), or if you change your password or log out everywhere. The display will show `HTTP 401` in that case.
 
 ## Configuration
 
-All settings are in your `show_my_usage.py` (step 6). Restart the service after a change: `sudo systemctl restart usage-monitor`.
+All settings are passed to the classes in your start script (`show_my_usage.py` on the Pi, `main.py` on the ESP32). These settings are the same on both boards; the display and board settings are listed in the board guides.
 
 **`ClaudeApi`**
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `credentials_file` | `~/.usage-monitor/credentials.json` | Where your login credentials are stored |
+| `credentials_file` | Pi: `~/.usage-monitor/credentials.json`, ESP32: `credentials.json` | Where your login credentials are stored |
 | `timeout` | `20` | Seconds to wait for an API response |
-
-**`Oled_m154_7p`**
-
-| Setting | Default | Meaning |
-|---|---|---|
-| `controller` | `ssd1309` | Display controller; use `ssd1306` if the display stays black |
-| `contrast` | `200` | Display brightness (0–255) |
-| `rotate` | `0` | Rotation in steps of 90°; `2` turns the picture upside down |
-| `gpio_data_command` | `24` | GPIO of the DC pin |
-| `gpio_reset` | `25` | GPIO of the RES pin |
-| `spi_port` | `0` | SPI bus |
-| `spi_device` | `0` | Chip select: `0` = CE0 (GPIO8), `1` = CE1 (GPIO7) |
-| `bus_speed_hz` | `8000000` | SPI clock; lower it if the picture shows glitches |
 
 **`UsageMonitor`**
 
@@ -237,22 +120,30 @@ All settings are in your `show_my_usage.py` (step 6). Restart the service after 
 
 ## Troubleshooting
 
+These apply to both boards. See the board guides for wiring, network and startup problems.
+
 | Display / log | Likely cause | Fix |
 |---|---|---|
-| Stays black | Wrong controller, SPI off or wiring | Set `controller="ssd1306"`; check `ls /dev/spidev*`; recheck wiring and 3.3 V |
-| `No credentials` | File missing | Create `~/.usage-monitor/credentials.json` (step 5) |
-| `HTTP 403` | `setup-token` used, or request blocked | Use the `claudeAiOauth` login credentials (step 4) |
+| `No credentials` | File missing | Put the credentials on the board (see the board guide) |
+| `HTTP 403` | `setup-token` used, or request blocked | Use the `claudeAiOauth` login credentials ([see above](#get-your-claude-login-credentials)) |
 | `HTTP 401` | Token invalid or expired | Copy fresh credentials, set `expiresAt` to `0`, restart |
-| `Token refresh at …: HTTP 404` in the log | Anthropic changed the refresh URL | Update `TOKEN_URLS` in `display_usage/api.py` |
-| `Loading...` forever | No network | Check Wi-Fi; see `journalctl -u usage-monitor` |
+| `Token refresh at …: HTTP 404` in the log | Anthropic changed the refresh URL | Update `TOKEN_URLS` in `api.py` (both versions) |
 
 ## Development
 
-The Pi doesn't need any of this; it's only for working on the code on your computer. Install [uv](https://docs.astral.sh/uv/), then:
+The boards don't need any of this; it's only for working on the code on your computer. Install [uv](https://docs.astral.sh/uv/), then:
 
 ```bash
 uv venv
 make devinstall   # installs ruff and ipdb into .venv
 make check        # check formatting and lint rules (same as the GitHub workflow)
 make correct      # fix formatting and lint issues
+```
+
+The checks cover the Pi and the ESP32 code. The two versions share their structure, so a change to one usually belongs in the other as well.
+
+MicroPython can't read TTF fonts, so the ESP32 uses DejaVu Sans pre-rendered as bitmaps (`esp32/display_usage/dejavu_sans_*.py`). They are rendered with Pillow the same way the Pi draws text, so both displays show the same pixels. To regenerate them, e.g. after changing the font sizes, download `DejaVuSans.ttf` and run:
+
+```bash
+uv run --no-project --with pillow python esp32/make_fonts.py /path/to/DejaVuSans.ttf
 ```
