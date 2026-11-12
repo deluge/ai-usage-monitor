@@ -16,7 +16,6 @@ FRAME_DELAY = 0.5  # speed of the loading animation
 
 
 class UsageMonitor:
-
     def __init__(
         self, api, oled, wifi=None, api_request_interval=120, display_refresh_interval=30
     ):
