@@ -35,20 +35,39 @@ class ClaudeApi:
         self.timeout = timeout
 
     def fetch_usage(self):
+        try:
+            return self.request_usage(self.get_token())
+        except urllib.error.HTTPError as error:
+            if error.code != 401:
+                raise
+        # The token was rejected before its expiry time (e.g. revoked because
+        # another client refreshed it): get a new one and try exactly once more.
+        log("Usage request returned HTTP 401, refreshing the token and retrying once.")
+        return self.request_usage(self.get_token(force_refresh=True))
+
+    def request_usage(self, token):
         headers = {
-            "Authorization": f"Bearer {self.get_token()}",
+            "Authorization": f"Bearer {token}",
             "anthropic-beta": "oauth-2025-04-20",
         }
         return self.request_json(USAGE_URL, headers=headers)
 
-    def get_token(self):
+    def get_token(self, force_refresh=False):
+        """Return a usable access token, refreshing it if needed.
+
+        Raises the HTTPError of a failed refresh unless the old token is still
+        valid, so that a broken login is not hammered with doomed requests.
+        """
         credentials = self.read_credentials()
         oauth = credentials["claudeAiOauth"]
-        if oauth.get("expiresAt", 0) / 1000 < time.time() + TOKEN_REFRESH_BUFFER:
+        expires_at = oauth.get("expiresAt", 0) / 1000
+        if force_refresh or expires_at < time.time() + TOKEN_REFRESH_BUFFER:
             try:
                 self.refresh_token(credentials)
             except urllib.error.HTTPError:
-                pass  # already logged; try the old token anyway
+                if force_refresh or expires_at <= time.time():
+                    raise
+                # Still valid for a few minutes: use it, refresh again next time.
         return oauth["accessToken"]
 
     def refresh_token(self, credentials):
@@ -63,7 +82,12 @@ class ClaudeApi:
         log("Token refreshed.")
 
     def request_new_token(self, refresh_token):
-        """Try each token URL in turn and raise the last error if all of them fail."""
+        """Try each token URL in turn and raise the last error if all of them fail.
+
+        Only move on to the next URL if the endpoint seems to be gone (404) or
+        broken (5xx). Any other error (invalid refresh token, rate limit, ...)
+        would be the same everywhere, so retrying elsewhere only adds requests.
+        """
         body = {
             "grant_type": "refresh_token",
             "refresh_token": refresh_token,
@@ -76,6 +100,8 @@ class ClaudeApi:
             except urllib.error.HTTPError as error:
                 log(f"Token refresh at {url}: HTTP {error.code} {read_error_body(error, 300)}")
                 last_error = error
+                if error.code != 404 and error.code < 500:
+                    break
         raise last_error
 
     def request_json(self, url, headers=None, body=None):

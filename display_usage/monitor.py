@@ -4,13 +4,20 @@ import threading
 import time
 import urllib.error
 
+from display_usage.api import TOKEN_URLS
 from display_usage.utils import log, read_error_body
 
 
 # Retry wait times in seconds.
-# After consecutive "Check token" (401/403) failures; the last one repeats.
-AUTH_RETRY_DELAYS = (10, 20, 60)
+# After consecutive auth failures (401/403, or a rejected token refresh);
+# the last one repeats. Each retry can cost up to three requests (usage, token
+# refresh, usage again), so back off far enough to stay clear of rate limits.
+AUTH_RETRY_DELAYS = (10, 30, 120, 600)
+# Show "Check token" on the display from this many consecutive auth failures on.
+AUTH_FAILURES_BEFORE_MESSAGE = 3
 API_ERROR_RETRY_DELAY = 60
+# After consecutive 429 (rate limit) responses without a usable Retry-After header:
+# start at this delay and double it each time, up to the maximum.
 RATE_LIMIT_BASE_DELAY = 120
 RATE_LIMIT_MAX_DELAY = 900
 NO_CREDENTIALS_RETRY_DELAY = 30
@@ -53,7 +60,7 @@ class UsageMonitor:
         log(f"HTTP {error.code} from {error.url}: {read_error_body(error)}")
         if error.code == 429:
             return self.handle_rate_limit(error)
-        if error.code not in (401, 403):
+        if not self.is_auth_error(error):
             self.show_fatal_error("API error", f"HTTP {error.code}", "")
             return API_ERROR_RETRY_DELAY
 
@@ -61,9 +68,14 @@ class UsageMonitor:
         self.auth_failures += 1
         log(f"Auth failure #{self.auth_failures}, retrying in {delay}s")
         # Keep the loading screen up while the early retries are pending.
-        if self.auth_failures >= len(AUTH_RETRY_DELAYS):
+        if self.auth_failures >= AUTH_FAILURES_BEFORE_MESSAGE:
             self.show_fatal_error("API error", f"HTTP {error.code}", "Check token")
         return delay
+
+    @staticmethod
+    def is_auth_error(error):
+        """401/403 anywhere, or 400 from the token endpoint (refresh token rejected)."""
+        return error.code in (401, 403) or (error.code == 400 and error.url in TOKEN_URLS)
 
     def handle_rate_limit(self, error):
         """Wait as long as the server asks, or back off exponentially.
