@@ -1,3 +1,4 @@
+import email.utils
 import os
 import threading
 import time
@@ -10,6 +11,8 @@ from display_usage.utils import log, read_error_body
 # After consecutive "Check token" (401/403) failures; the last one repeats.
 AUTH_RETRY_DELAYS = (10, 20, 60)
 API_ERROR_RETRY_DELAY = 60
+RATE_LIMIT_BASE_DELAY = 120
+RATE_LIMIT_MAX_DELAY = 900
 NO_CREDENTIALS_RETRY_DELAY = 30
 NETWORK_ERROR_RETRY_DELAY = 15
 
@@ -23,6 +26,7 @@ class UsageMonitor:
         self.state = {"usage": None, "error": None, "fatal": False}
         self.lock = threading.Lock()
         self.auth_failures = 0
+        self.rate_limit_failures = 0
 
     def fetch_loop(self):
         while True:
@@ -40,12 +44,15 @@ class UsageMonitor:
             return self.handle_network_error(error)
 
         self.auth_failures = 0
+        self.rate_limit_failures = 0
         with self.lock:
             self.state["usage"], self.state["error"] = usage, None
         return self.api_request_interval
 
     def handle_http_error(self, error):
         log(f"HTTP {error.code} from {error.url}: {read_error_body(error)}")
+        if error.code == 429:
+            return self.handle_rate_limit(error)
         if error.code not in (401, 403):
             self.show_fatal_error("API error", f"HTTP {error.code}", "")
             return API_ERROR_RETRY_DELAY
@@ -57,6 +64,42 @@ class UsageMonitor:
         if self.auth_failures >= len(AUTH_RETRY_DELAYS):
             self.show_fatal_error("API error", f"HTTP {error.code}", "Check token")
         return delay
+
+    def handle_rate_limit(self, error):
+        """Wait as long as the server asks, or back off exponentially.
+
+        The last known usage stays on the display; the message is only shown
+        if no usage has been fetched yet.
+        """
+        delay = self.parse_retry_after(error.headers.get("Retry-After"))
+        if delay is None:
+            delay = min(
+                RATE_LIMIT_BASE_DELAY * 2**self.rate_limit_failures, RATE_LIMIT_MAX_DELAY
+            )
+        self.rate_limit_failures += 1
+        log(f"Rate limited (#{self.rate_limit_failures}), retrying in {delay}s")
+        with self.lock:
+            if self.state["usage"] is None:
+                self.state["error"] = ("Rate limited", f"Retry in {(delay + 59) // 60} min", "")
+                self.state["fatal"] = True  # leave the loading screen
+        return delay
+
+    @staticmethod
+    def parse_retry_after(value):
+        """Return the Retry-After header (seconds or HTTP date) in seconds, or None."""
+        if not value:
+            return None
+        value = value.strip()
+        if value.isdigit():
+            seconds = int(value)
+        else:
+            try:
+                seconds = int(
+                    email.utils.parsedate_to_datetime(value).timestamp() - time.time()
+                )
+            except (TypeError, ValueError):
+                return None
+        return min(max(seconds, NETWORK_ERROR_RETRY_DELAY), RATE_LIMIT_MAX_DELAY)
 
     def handle_missing_credentials(self):
         directory, filename = os.path.split(self.api.credentials_file)
