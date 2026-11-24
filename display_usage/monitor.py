@@ -134,10 +134,13 @@ class UsageMonitor:
     def render_usage(self):
         with self.lock:
             usage, error = self.state["usage"], self.state["error"]
-        if usage is not None:
-            self.oled.show_usage(usage)
-        elif error:
+        # While usage is known, an error is only set by an auth or API error
+        # (rate limits and network errors keep it unset); show it instead of
+        # silently freezing on old numbers. The next successful fetch clears it.
+        if error:
             self.oled.show_message(*error)
+        elif usage is not None:
+            self.oled.show_usage(usage)
         else:
             self.oled.show_loading()
 

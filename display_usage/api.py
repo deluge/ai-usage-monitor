@@ -84,9 +84,9 @@ class ClaudeApi:
     def request_new_token(self, refresh_token):
         """Try each token URL in turn and raise the last error if all of them fail.
 
-        Only move on to the next URL if the endpoint seems to be gone (404) or
-        broken (5xx). Any other error (invalid refresh token, rate limit, ...)
-        would be the same everywhere, so retrying elsewhere only adds requests.
+        The endpoints do not behave the same: one may reject a refresh token
+        (e.g. with HTTP 400) that the other one accepts, so always try the next
+        URL. Only a rate limit (429) stops early, as more requests won't help.
         """
         body = {
             "grant_type": "refresh_token",
@@ -100,7 +100,7 @@ class ClaudeApi:
             except urllib.error.HTTPError as error:
                 log(f"Token refresh at {url}: HTTP {error.code} {read_error_body(error, 300)}")
                 last_error = error
-                if error.code != 404 and error.code < 500:
+                if error.code == 429:
                     break
         raise last_error
 
