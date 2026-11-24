@@ -252,7 +252,11 @@ The Pi doesn't need any of this; it's only for working on the code on your compu
 
 ```bash
 uv venv
-make devinstall   # installs ruff and ipdb into .venv
+make devinstall   # installs pytest, ruff and ipdb into .venv
 make check        # check formatting and lint rules (same as the GitHub workflow)
 make correct      # fix formatting and lint issues
+make tests        # run the tests (ARGS="-k monitor" to pass options to pytest)
+make coverage     # run the tests with a coverage report (same as the GitHub workflow)
 ```
+
+The tests live in `testing/tests/` and run without a Pi: HTTP requests go to a fake server (`testing/fakes/api.py`) and the display draws on luma's in-memory dummy device.

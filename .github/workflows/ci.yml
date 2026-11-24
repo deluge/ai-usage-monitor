@@ -1,11 +1,11 @@
-name: Lint
+name: CI
 
 on:
   push:
   pull_request:
 
 jobs:
-  lint:
+  codestyle:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
@@ -22,3 +22,21 @@ jobs:
 
       - name: Check lint rules
         run: uvx ruff@0.17.3 check --output-format=github .
+
+  tests:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --locked --extra testing
+
+      - name: Run tests
+        run: make coverage
