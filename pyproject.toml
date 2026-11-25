@@ -13,11 +13,28 @@ dependencies = []
 
 [project.optional-dependencies]
 testing = [
+	"freezegun>=1.5.5,<1.6",
+	"luma.oled>=3.16,<3.17",
+	"Pillow>=13,<13.1",
+	"pytest>=9.2,<9.3",
+	"pytest-cov>=7.1.0,<7.2",
+	"requests>=2.34,<2.35",
 	"ruff>=0.17.3",
 ]
 develop = [
 	"ai-usage-monitor[testing]",
 	"ipdb>=0.13.13,<0.14",
+]
+
+[tool.pytest.ini_options]
+addopts = "--verbose --tb=short -p no:doctest"
+
+testpaths = [
+	"testing/",
+]
+
+python_files = [
+	"test_*.py",
 ]
 
 [tool.ruff]
@@ -43,3 +60,20 @@ lines-after-imports = 2
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.coverage.run]
+branch = true
+source = [
+	"display_usage",
+]
+
+omit = [
+	"*/__init__.py",
+	"display_usage/esp32/dejavu_sans_*.py",  # generated font data
+]
+
+[tool.coverage.report]
+exclude_lines = [
+	"raise NotImplementedError",
+	"except ImportError:",  # fallbacks for MicroPython
+]
