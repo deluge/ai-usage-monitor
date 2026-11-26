@@ -1,6 +1,7 @@
 import pytest
 from freezegun import freeze_time
 
+from conftest import NOW
 from display_usage.display import BaseDisplay
 from display_usage.utils import Timezone
 from testing.fakes.display import PrimitivesDisplay
@@ -114,6 +115,30 @@ class TestShowUsage:
 
         assert screen.texts()[1] == text
         assert bar_fill(screen, 3) == fill
+
+    def test_expired_window_is_empty(self, screen):
+        screen.show_usage(
+            {"five_hour": {"utilization": 90, "resets_at": "2026-11-24T11:59:00+00:00"}}
+        )
+
+        assert screen.texts()[:3] == ["Current", "0%", "Reset: --"]
+        assert bar_fill(screen, 3) is None
+
+    def test_old_data_replaces_weekly_reset(self, screen):
+        updated_at = NOW - 3600
+
+        screen.show_usage(USAGE, updated_at=updated_at)
+
+        assert screen.texts()[-1] == "Data from Tue 11:00"
+        assert "Reset Fri 27.11. 09:00" not in screen.texts()
+        assert "Reset 14:30 (2h30)" in screen.texts()
+
+    def test_old_data_uses_timezone(self):
+        screen = PrimitivesDisplay(Timezone(1))
+
+        screen.show_usage(USAGE, updated_at=NOW - 3600)
+
+        assert screen.texts()[-1] == "Data from Tue 12:00"
 
     def test_missing_data(self, screen):
         screen.show_usage({"five_hour": None})

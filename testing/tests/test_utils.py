@@ -9,8 +9,10 @@ from display_usage.utils import (
     Timezone,
     format_reset_current,
     format_reset_weekly,
+    format_updated_at,
     log,
     parse_reset,
+    read_window,
     sunday_of_month,
     unix_time,
 )
@@ -151,3 +153,35 @@ class TestFormatResetWeekly:
         reset_at = utc(2026, 11, 27, 23, 30, 0)
 
         assert format_reset_weekly(reset_at, Timezone(1)) == "Reset Sat 28.11. 00:30"
+
+
+class TestFormatUpdatedAt:
+    def test_system_timezone(self):
+        assert (
+            format_updated_at(utc(2026, 11, 24, 9, 5, 0), Timezone()) == "Data from Tue 09:05"
+        )
+
+    def test_timezone(self):
+        updated_at = utc(2026, 11, 24, 23, 30, 0) + 0.75  # time.time() has fractions
+
+        assert format_updated_at(updated_at, Timezone(1)) == "Data from Wed 00:30"
+
+
+@freeze_time("2026-11-24 12:00:00")
+class TestReadWindow:
+    def test_missing(self):
+        assert read_window(None) == (None, None)
+        assert read_window({}) == (None, None)
+
+    def test_active(self):
+        window = {"utilization": 42.0, "resets_at": "2026-11-24T14:30:00+00:00"}
+
+        assert read_window(window) == (42.0, utc(2026, 11, 24, 14, 30, 0))
+
+    def test_without_reset_time(self):
+        assert read_window({"utilization": 0.0, "resets_at": None}) == (0.0, None)
+
+    @pytest.mark.parametrize("resets_at", ["2026-11-24T12:00:00+00:00", "2026-11-24T09:00:00Z"])
+    def test_expired(self, resets_at):
+        """The window has reset: its old utilization no longer applies."""
+        assert read_window({"utilization": 87.0, "resets_at": resets_at}) == (0.0, None)

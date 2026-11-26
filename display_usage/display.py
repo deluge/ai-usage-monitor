@@ -2,7 +2,8 @@ from display_usage.utils import (
     Timezone,
     format_reset_current,
     format_reset_weekly,
-    parse_reset,
+    format_updated_at,
+    read_window,
 )
 
 
@@ -52,19 +53,19 @@ class BaseDisplay:
         self.text(0, 26, "Loading" + "." * dots, self.font)
         self.show()
 
-    def show_usage(self, usage):
-        five_hour = usage.get("five_hour") or {}
-        seven_day = usage.get("seven_day") or {}
-        current_reset = format_reset_current(
-            parse_reset(five_hour.get("resets_at")), self.timezone
-        )
-        weekly_reset = format_reset_weekly(
-            parse_reset(seven_day.get("resets_at")), self.timezone
-        )
+    def show_usage(self, usage, updated_at=None):
+        """Draw the usage; pass updated_at (seconds) to show that the data is old."""
+        current_percent, current_reset_at = read_window(usage.get("five_hour"))
+        weekly_percent, weekly_reset_at = read_window(usage.get("seven_day"))
+        current_reset = format_reset_current(current_reset_at, self.timezone)
+        if updated_at is None:
+            weekly_reset = format_reset_weekly(weekly_reset_at, self.timezone)
+        else:
+            weekly_reset = format_updated_at(updated_at, self.timezone)
         self.clear()
-        self._draw_block(0, "Current", five_hour.get("utilization"), current_reset)
+        self._draw_block(0, "Current", current_percent, current_reset)
         self.rectangle(0, 31, self.WIDTH - 1, 31, fill=True)
-        self._draw_block(34, "Weekly", seven_day.get("utilization"), weekly_reset)
+        self._draw_block(34, "Weekly", weekly_percent, weekly_reset)
         self.show()
 
     def _draw_block(self, top, label, percent, reset_text):

@@ -28,6 +28,10 @@ NETWORK_ERROR_RETRY_DELAY = 15
 WIFI_ERROR_RETRY_DELAY = 15
 WIFI_WAIT_DELAY = 1
 FRAME_DELAY = 0.5  # speed of the loading animation
+# Network errors and rate limits keep the last usage on the display. Once it is
+# older than this (in seconds, or 3 request intervals if that is longer), the
+# display says when it is from.
+STALE_AFTER = 600
 
 
 class UsageMonitor:
@@ -42,6 +46,7 @@ class UsageMonitor:
         self.usage = None
         self.error = None
         self.fatal = False
+        self.updated_at = None  # time.time() of the last successful fetch
         self.auth_failures = 0
         self.rate_limit_failures = 0
 
@@ -63,6 +68,7 @@ class UsageMonitor:
         self.auth_failures = 0
         self.rate_limit_failures = 0
         self.usage, self.error = usage, None
+        self.updated_at = time.time()
         return self.api_request_interval
 
     def handle_http_error(self, error):
@@ -148,7 +154,11 @@ class UsageMonitor:
         if self.error:
             self.oled.show_message(*self.error)
         elif self.usage is not None:
-            self.oled.show_usage(self.usage)
+            stale_after = max(STALE_AFTER, 3 * self.api_request_interval)
+            if time.time() - self.updated_at > stale_after:
+                self.oled.show_usage(self.usage, self.updated_at)
+            else:
+                self.oled.show_usage(self.usage)
         else:
             self.oled.show_loading()
 

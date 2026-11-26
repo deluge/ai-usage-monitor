@@ -1,6 +1,7 @@
 import pytest
 from freezegun import freeze_time
 
+from conftest import NOW
 from display_usage import monitor as monitor_module
 from display_usage.api import TOKEN_URLS, USAGE_URL
 from display_usage.errors import CredentialsMissing, WifiError
@@ -10,6 +11,7 @@ from display_usage.monitor import (
     NETWORK_ERROR_RETRY_DELAY,
     NO_CREDENTIALS_RETRY_DELAY,
     RATE_LIMIT_MAX_DELAY,
+    STALE_AFTER,
     WIFI_ERROR_RETRY_DELAY,
     WIFI_WAIT_DELAY,
     UsageMonitor,
@@ -231,6 +233,49 @@ class TestRenderUsage:
         monitor.render_usage()
 
         assert display.last_call == ("message", ("API error", "HTTP 500", ""))
+
+
+@freeze_time("2026-11-24 12:00:00")
+def test_success_remembers_time(display):
+    monitor = make_monitor(display, USAGE)
+
+    monitor.fetch_once()
+
+    assert monitor.updated_at == NOW
+
+
+class TestStaleUsage:
+    """Network errors and rate limits keep the old usage, but not silently forever."""
+
+    def render_after(self, display, seconds, *errors, interval=120):
+        monitor = make_monitor(display, USAGE, *errors)
+        monitor.api_request_interval = interval
+        with freeze_time("2026-11-24 12:00:00") as frozen:
+            for _ in range(len(errors) + 1):
+                monitor.fetch_once()
+            frozen.tick(seconds)
+            monitor.render_usage()
+        return display.last_call
+
+    def test_fresh(self, display):
+        assert self.render_after(display, STALE_AFTER, OSError("down")) == ("usage", USAGE)
+
+    def test_network_error(self, display):
+        last_call = self.render_after(display, STALE_AFTER + 1, OSError("down"))
+
+        assert last_call == ("usage", USAGE, NOW)
+
+    def test_rate_limit(self, display):
+        error = http_error(USAGE_URL, 429)
+
+        last_call = self.render_after(display, STALE_AFTER + 1, error)
+
+        assert last_call == ("usage", USAGE, NOW)
+
+    def test_long_request_interval(self, display):
+        """With a long interval, old data is normal: wait for 3 missed fetches."""
+        assert self.render_after(display, 3 * 600, interval=600) == ("usage", USAGE)
+        assert self.render_after(display, 3 * 600 + 1, interval=600) == ("usage", USAGE, NOW)
 
 
 class TestRun:

@@ -90,6 +90,19 @@ class Timezone:
         return start <= seconds < end
 
 
+def read_window(window):
+    """Return (utilization, reset time) of a usage window ("five_hour", "seven_day").
+
+    Once its reset time has passed, the window is empty until the next fetch
+    brings the new one: the old utilization no longer applies.
+    """
+    window = window or {}
+    reset_at = parse_reset(window.get("resets_at"))
+    if reset_at is not None and reset_at <= time.time():
+        return 0.0, None
+    return window.get("utilization"), reset_at
+
+
 def format_reset_current(reset_at, timezone):
     if reset_at is None:
         return "Reset: --"
@@ -104,3 +117,9 @@ def format_reset_weekly(reset_at, timezone):
     local = timezone.localtime(reset_at)
     weekday, day, month = WEEKDAYS[local[6]], local[2], local[1]
     return f"Reset {weekday} {day:02d}.{month:02d}. {local[3]:02d}:{local[4]:02d}"
+
+
+def format_updated_at(updated_at, timezone):
+    """Shown instead of the weekly reset while no new data arrives (see the log for why)."""
+    local = timezone.localtime(int(updated_at))
+    return f"Data from {WEEKDAYS[local[6]]} {local[3]:02d}:{local[4]:02d}"
