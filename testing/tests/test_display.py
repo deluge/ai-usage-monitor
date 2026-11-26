@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from freezegun import freeze_time
 from luma.core.device import dummy
@@ -114,6 +116,25 @@ class TestShowUsage:
         oled.show_usage({"five_hour": {"utilization": 250}})
 
         assert ImageChops.difference(full, oled.device.image).getbbox() is None
+
+    def test_expired_window_shows_empty_bar(self, oled):
+        oled.show_usage({"five_hour": {"utilization": 0}})
+        empty = oled.device.image.copy()
+
+        oled.show_usage(
+            {"five_hour": {"utilization": 90, "resets_at": "2026-11-24T11:59:00+00:00"}}
+        )
+
+        assert ImageChops.difference(empty, oled.device.image).getbbox() is None
+
+    def test_old_data_replaces_weekly_reset(self, oled):
+        oled.show_usage(USAGE)
+        weekly_reset = oled.device.image.crop((0, 48, 128, 64))
+
+        oled.show_usage(USAGE, updated_at=datetime.datetime(2026, 11, 24, 11, 0))
+
+        changed = ImageChops.difference(weekly_reset, oled.device.image.crop((0, 48, 128, 64)))
+        assert changed.getbbox() is not None
 
     def test_missing_data(self, oled):
         oled.show_usage({"five_hour": None})

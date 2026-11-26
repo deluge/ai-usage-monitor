@@ -1,3 +1,4 @@
+import datetime
 import email.utils
 import os
 import threading
@@ -22,6 +23,10 @@ RATE_LIMIT_BASE_DELAY = 120
 RATE_LIMIT_MAX_DELAY = 900
 NO_CREDENTIALS_RETRY_DELAY = 30
 NETWORK_ERROR_RETRY_DELAY = 15
+# Network errors and rate limits keep the last usage on the display. Once it is
+# older than this (in seconds, or 3 request intervals if that is longer), the
+# display says when it is from.
+STALE_AFTER = 600
 
 
 class UsageMonitor:
@@ -30,7 +35,7 @@ class UsageMonitor:
         self.oled = oled
         self.api_request_interval = api_request_interval
         self.display_refresh_interval = display_refresh_interval
-        self.state = {"usage": None, "error": None, "fatal": False}
+        self.state = {"usage": None, "error": None, "fatal": False, "updated_at": None}
         self.lock = threading.Lock()
         self.auth_failures = 0
         self.rate_limit_failures = 0
@@ -54,6 +59,7 @@ class UsageMonitor:
         self.rate_limit_failures = 0
         with self.lock:
             self.state["usage"], self.state["error"] = usage, None
+            self.state["updated_at"] = time.time()
         return self.api_request_interval
 
     def handle_http_error(self, error):
@@ -134,13 +140,18 @@ class UsageMonitor:
     def render_usage(self):
         with self.lock:
             usage, error = self.state["usage"], self.state["error"]
+            updated_at = self.state["updated_at"]
         # While usage is known, an error is only set by an auth or API error
         # (rate limits and network errors keep it unset); show it instead of
         # silently freezing on old numbers. The next successful fetch clears it.
         if error:
             self.oled.show_message(*error)
         elif usage is not None:
-            self.oled.show_usage(usage)
+            stale_after = max(STALE_AFTER, 3 * self.api_request_interval)
+            if time.time() - updated_at > stale_after:
+                self.oled.show_usage(usage, datetime.datetime.fromtimestamp(updated_at))
+            else:
+                self.oled.show_usage(usage)
         else:
             self.oled.show_loading()
 

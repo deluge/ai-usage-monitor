@@ -34,6 +34,19 @@ def parse_reset(iso_timestamp):
     return datetime.datetime.fromisoformat(iso_timestamp).astimezone()
 
 
+def read_window(window):
+    """Return (utilization, reset time) of a usage window ("five_hour", "seven_day").
+
+    Once its reset time has passed, the window is empty until the next fetch
+    brings the new one: the old utilization no longer applies.
+    """
+    window = window or {}
+    reset_at = parse_reset(window.get("resets_at"))
+    if reset_at is not None and reset_at <= datetime.datetime.now().astimezone():
+        return 0.0, None
+    return window.get("utilization"), reset_at
+
+
 def format_reset_current(reset_at):
     if reset_at is None:
         return "Reset: --"
@@ -47,3 +60,8 @@ def format_reset_weekly(reset_at):
     if reset_at is None:
         return "Reset: --"
     return f"Reset {WEEKDAYS[reset_at.weekday()]} {reset_at:%d.%m. %H:%M}"
+
+
+def format_updated_at(updated_at):
+    """Shown instead of the weekly reset while no new data arrives (see the log for why)."""
+    return f"Data from {WEEKDAYS[updated_at.weekday()]} {updated_at:%H:%M}"

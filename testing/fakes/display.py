@@ -13,8 +13,11 @@ class FakeDisplay(BaseDisplay):
     def show_loading(self, dots=3):
         self.calls.append(("loading", dots))
 
-    def show_usage(self, usage):
-        self.calls.append(("usage", usage))
+    def show_usage(self, usage, updated_at=None):
+        if updated_at is None:
+            self.calls.append(("usage", usage))
+        else:
+            self.calls.append(("usage", usage, updated_at))
 
     @property
     def last_call(self):

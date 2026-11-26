@@ -5,8 +5,9 @@ from luma.oled.device import ssd1306, ssd1309
 from display_usage.utils import (
     format_reset_current,
     format_reset_weekly,
+    format_updated_at,
     load_font,
-    parse_reset,
+    read_window,
 )
 
 
@@ -62,15 +63,19 @@ class Oled_m154_7p(BaseDisplay):
             for i, line in enumerate(lines):
                 draw.text((0, i * self.LINE_HEIGHT), line, font=self.font, fill="white")
 
-    def show_usage(self, usage):
-        five_hour = usage.get("five_hour") or {}
-        seven_day = usage.get("seven_day") or {}
-        current_reset = format_reset_current(parse_reset(five_hour.get("resets_at")))
-        weekly_reset = format_reset_weekly(parse_reset(seven_day.get("resets_at")))
+    def show_usage(self, usage, updated_at=None):
+        """Draw the usage; pass updated_at (a datetime) to show that the data is old."""
+        current_percent, current_reset_at = read_window(usage.get("five_hour"))
+        weekly_percent, weekly_reset_at = read_window(usage.get("seven_day"))
+        current_reset = format_reset_current(current_reset_at)
+        if updated_at is None:
+            weekly_reset = format_reset_weekly(weekly_reset_at)
+        else:
+            weekly_reset = format_updated_at(updated_at)
         with canvas(self.device) as draw:
-            self._draw_block(draw, 0, "Current", five_hour.get("utilization"), current_reset)
+            self._draw_block(draw, 0, "Current", current_percent, current_reset)
             draw.line((0, 31, self.WIDTH - 1, 31), fill="white")
-            self._draw_block(draw, 34, "Weekly", seven_day.get("utilization"), weekly_reset)
+            self._draw_block(draw, 34, "Weekly", weekly_percent, weekly_reset)
 
     def _draw_block(self, draw, top, label, percent, reset_text):
         """Draw "label [bar] xx%" with the reset time in the line below."""
