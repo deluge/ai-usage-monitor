@@ -51,7 +51,7 @@ sudo apt install -y git fonts-dejavu-core python3-luma.core python3-luma.oled py
 git clone https://github.com/deluge/ai-usage-monitor.git ~/ai-usage-monitor
 ```
 
-The script runs with the system-wide `python3`, so the Python packages are installed with `apt` (via `sudo`) instead of a virtual environment.
+The display runs with the system-wide `python3`, so the Python packages are installed with `apt` (via `sudo`) instead of a virtual environment.
 
 ### 4. Get your Claude login credentials
 
@@ -67,43 +67,46 @@ chmod 600 ~/.usage-monitor/credentials.json
 
 Paste the credentials and change the value after `"expiresAt":` to `0`.
 
-### 6. Create your start script
+### 6. Create your settings (optional)
 
-`show_my_usage.py` in the project folder starts the display with your own settings. It is listed in `.gitignore`, so `git pull` never overwrites it. Create it:
+Without settings, the display uses the default for everything. To change something, create `~/.usage-monitor/settings.json` next to the credentials, e.g. to turn the picture upside down:
 
 ```bash
-nano ~/ai-usage-monitor/show_my_usage.py
+cp ~/ai-usage-monitor/settings.example.pi.json ~/.usage-monitor/settings.json
+nano ~/.usage-monitor/settings.json
 ```
 
-Paste the following content and save. It uses the default for every setting:
-
-```python
-from display_usage.api import ClaudeApi
-from display_usage.monitor import UsageMonitor
-from display_usage.pizerow.display import Oled_m154_7p
-
-
-api = ClaudeApi()
-oled = Oled_m154_7p()
-
-monitor = UsageMonitor(api, oled)
-monitor.run()
+```json
+{
+	"display": {"rotate": 2}
+}
 ```
 
-To change a setting, pass it to the class. All settings and their defaults are listed under [Configuration](#configuration). For example:
+All settings and their defaults are listed under [Configuration](#configuration).
+
+### 7. Create main.py
+
+`main.py` starts the display. Create it in the project folder (listed in `.gitignore`, so `git pull` never overwrites it):
+
+```bash
+cd ~/ai-usage-monitor
+nano main.py
+```
 
 ```python
-oled = Oled_m154_7p(contrast=100, rotate=2)
+from display_usage.pizerow.app import main
+
+
+main()
 ```
 
 Test it (Ctrl+C to stop):
 
 ```bash
-cd ~/ai-usage-monitor
-python3 show_my_usage.py
+python3 main.py
 ```
 
-### 7. Start on boot
+### 8. Start on boot
 
 Create the service file:
 
@@ -122,7 +125,7 @@ After=network-online.target
 [Service]
 User=pi
 WorkingDirectory=/home/pi/ai-usage-monitor
-ExecStart=/usr/bin/python3 /home/pi/ai-usage-monitor/show_my_usage.py
+ExecStart=/usr/bin/python3 main.py
 Restart=always
 RestartSec=10
 
@@ -137,22 +140,33 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now usage-monitor
 ```
 
-### 8. Log in again on your computer
+### 9. Log in again on your computer
 
 Follow [Log in again on your computer](README.md#log-in-again-on-your-computer) in the main README.
 
+## Updating
+
+```bash
+cd ~/ai-usage-monitor
+git pull
+sudo systemctl restart usage-monitor
+```
+
+Your `~/.usage-monitor/settings.json` and `credentials.json` stay untouched.
+
+**Coming from a version with `show_my_usage.py`?** Move your settings from it into `~/.usage-monitor/settings.json` (step 6), create `main.py` (step 7) and delete `show_my_usage.py`, change `ExecStart` in the service file to `/usr/bin/python3 main.py` (step 8), then run `sudo systemctl daemon-reload` and restart the service.
+
 ## Configuration
 
-All settings are in your `show_my_usage.py` (step 6). Restart the service after a change: `sudo systemctl restart usage-monitor`.
+All settings are in `~/.usage-monitor/settings.json` (step 6). Restart the service after a change: `sudo systemctl restart usage-monitor`.
 
-The `ClaudeApi`, `UsageMonitor` and `Timezone` settings are listed in the [main README](README.md#configuration).
+Each section holds the settings of one part: `display` (the table below), and `timezone`, `api` and `monitor` (see the [main README](README.md#configuration)). Leave out what you don't change. A misspelled setting stops the start with a message in the log (`journalctl -u usage-monitor`).
 
-**`Oled_m154_7p`**
+**`display`**
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `timezone` | `Timezone()` (system timezone) | Timezone for the reset times |
-| `controller` | `ssd1309` | Display controller; use `ssd1306` if the display stays black |
+| `controller` | `"ssd1309"` | Display controller; use `"ssd1306"` if the display stays black |
 | `contrast` | `200` | Display brightness (0–255) |
 | `rotate` | `0` | Rotation in steps of 90°; `2` turns the picture upside down |
 | `gpio_data_command` | `24` | GPIO of the DC pin |
@@ -167,6 +181,7 @@ See also the [common problems](README.md#troubleshooting) in the main README.
 
 | Display / log | Likely cause | Fix |
 |---|---|---|
-| Stays black | Wrong controller, SPI off or wiring | Set `controller="ssd1306"`; check `ls /dev/spidev*`; recheck wiring and 3.3 V |
+| Stays black | Wrong controller, SPI off or wiring | Set `"controller": "ssd1306"` in the `display` section; check `ls /dev/spidev*`; recheck wiring and 3.3 V |
 | `No credentials` | File missing | Create `~/.usage-monitor/credentials.json` (step 5) |
+| `SettingsError: …` | Misspelled setting, invalid value or invalid JSON | Fix `~/.usage-monitor/settings.json` (see [Configuration](#configuration)) |
 | `Loading...` forever | No network | Check Wi-Fi; see `journalctl -u usage-monitor` |

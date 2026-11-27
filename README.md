@@ -42,19 +42,22 @@ Claude Code shows your limits with `/usage`. Behind that is an **undocumented** 
 | `display_usage/monitor.py` | `UsageMonitor`: fetches the usage and keeps the display updated |
 | `display_usage/api.py` | `ClaudeApi`: credentials, token refresh and usage requests |
 | `display_usage/display.py` | `BaseDisplay`: the screen layout, drawn with a few primitives each board implements |
+| `display_usage/settings.py` | Reads `settings.json` and creates the monitor, display, API and Wi-Fi from it |
 | `display_usage/utils.py` | Shared helpers: logging, time and `Timezone`, reset time formatting |
 | `display_usage/errors.py` | Exceptions shared by the modules above |
+| `display_usage/pizerow/app.py` | Starts the display on the Pi (called by your `main.py`) |
 | `display_usage/pizerow/display.py` | `Oled_m154_7p` for the Raspberry Pi (luma.oled, TrueType fonts) |
+| `display_usage/esp32/app.py` | Starts the display on the ESP32 (called by your `main.py`) |
 | `display_usage/esp32/display.py` | `Oled_m154_7p` for the ESP32 (MicroPython's `ssd1306` driver with the SSD1309 setup the Pi uses) |
 | `display_usage/esp32/wifi.py` | `Wifi`: Wi-Fi connection and clock sync on the ESP32 |
 | `display_usage/esp32/font.py` | `BitmapFont`: draws the bitmap fonts below |
 | `display_usage/esp32/dejavu_sans_*.py` | DejaVu Sans as bitmap fonts for the ESP32 (generated) |
 | `tools/make_esp32_fonts.py` | Generates the ESP32 bitmap fonts from `DejaVuSans.ttf` |
-| `show_my_usage.py` | Your own Pi start script with your settings (not in git) |
-| `main.py` | Your own ESP32 start script with your settings (not in git) |
+| `settings.example.esp32.json` / `settings.example.pi.json` | Examples for your `settings.json` |
+| `Makefile` | Development commands and the ESP32 install and update commands (`make help`) |
 | `credentials.example.json` | Shape of the credentials file |
+| `testing/` | Tests and the fakes they run with (see [Development](#development)) |
 | `pyproject.toml` / `uv.lock` | Development tools and settings (managed with [uv](https://docs.astral.sh/uv/)); the boards don't use them |
-| `Makefile` | Shortcuts for formatting and checking code (`make help`) |
 | `3Dprint/pizero_oled154_case.scad` | OpenSCAD source of the Pi case (adjustable) |
 | `3Dprint/pizero_oled154_case.stl` | Ready-to-print Pi case (body and bottom plate) |
 
@@ -71,7 +74,7 @@ Both boards use the same display:
 
 The OLED is monochrome. The text color (white, blue, yellow, green…) is fixed by the display you buy and cannot be changed in software.
 
-The pin order on the display can differ between sellers, so always wire by the labels printed on your board: `GND`, `VCC`, `SCL` (SPI clock), `SDA` (SPI data), `RES` (reset), `DC` (data/command) and `CS` (chip select). Power it with **3.3 V**.
+The pin order on the display can differ between sellers, so always wire by the labels printed on your board: `GND`, `VCC`, `SCL` (SPI clock), `SDA` (SPI data), `RES` (reset), `DC` (data/command) and `CS` (chip select). It accepts **3.3–5 V** on `VCC` (it has its own voltage regulator); the board guides show which pin to use.
 
 ## Get your Claude login credentials
 
@@ -105,29 +108,39 @@ You only need to copy the credentials again if the board was off for a long time
 
 ## Configuration
 
-All settings are passed to the classes in your start script (`show_my_usage.py` on the Pi, `main.py` on the ESP32). These settings are the same on both boards; the display and Wi-Fi settings are listed in the board guides.
+Each board is started by a small `main.py` you create from the board guide; it reads your settings from a JSON file, `settings.json` (on the Pi in `~/.usage-monitor/`, on the ESP32 in the project folder, copied to the board). Both files are yours: they are listed in `.gitignore`, so `git pull` never overwrites them. It has one section per part, and every setting is optional; leave out what you don't change:
 
-**`ClaudeApi`**
+```json
+{
+	"timezone": {"utc_offset": 1, "dst": "eu"},
+	"display": {"contrast": 100},
+	"api": {"timeout": 20},
+	"monitor": {"api_request_interval": 120}
+}
+```
+
+The sections below are the same on both boards; the `display` and `wifi` (ESP32 only) sections are listed in the board guides. A misspelled setting stops the start with a message in the log.
+
+**`api`**
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `credentials_file` | Pi: `~/.usage-monitor/credentials.json`, ESP32: `credentials.json` | Where your login credentials are stored |
 | `timeout` | `20` | Seconds to wait for an API response |
 
-**`UsageMonitor`**
+**`monitor`**
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `wifi` | `None` | The `Wifi` connection on the ESP32; not needed on the Pi |
 | `api_request_interval` | `120` | Seconds between API requests (don't go too low) |
 | `display_refresh_interval` | `30` | Seconds between screen redraws (updates the countdown) |
 
-**`Timezone`** (passed to `Oled_m154_7p` as `timezone`)
+**`timezone`**
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `utc_offset` | `None` | Your standard (winter) time offset from UTC in hours, e.g. `1` for Germany, `-5` for New York, `5.5` for India. `None` uses the system's timezone, which is right on the Pi; the ESP32 has none, so set it there |
-| `dst` | `None` | Summer time rule: `"eu"` (last Sunday in March to last Sunday in October), `"us"` (second Sunday in March to first Sunday in November) or `None` |
+| `utc_offset` | `null` | Your standard (winter) time offset from UTC in hours, e.g. `1` for Germany, `-5` for New York, `5.5` for India. `null` uses the system's timezone, which is right on the Pi; the ESP32 has none, so set it there |
+| `dst` | `null` | Summer time rule: `"eu"` (last Sunday in March to last Sunday in October), `"us"` (second Sunday in March to first Sunday in November) or `null` |
 
 ## Troubleshooting
 
@@ -145,12 +158,12 @@ These apply to both boards. See the board guides for wiring, network and startup
 The boards don't need any of this; it's only for working on the code on your computer. Install [uv](https://docs.astral.sh/uv/), then:
 
 ```bash
-uv venv
-make devinstall   # installs pytest, ruff and ipdb into .venv
+make devinstall   # installs pytest, ruff, mpy-cross and ipdb into .venv (versions from uv.lock)
 make check        # check formatting and lint rules (same as the GitHub workflow)
 make correct      # fix formatting and lint issues
 make tests        # run the tests (ARGS="-k monitor" to pass options to pytest)
 make coverage     # run the tests with a coverage report (same as the GitHub workflow)
+make esp32        # compile the ESP32 code with mpy-cross (same as the GitHub workflow)
 ```
 
 The tests live in `testing/tests/` and run on your computer with plain Python 3, no board needed: HTTP requests go to a fake server (`testing/fakes/api.py`), the Pi display draws on luma's in-memory dummy device, and the ESP32 modules (`machine`, `network`, `framebuf`, ...) are replaced by fakes (`testing/fakes/micropython.py`).
@@ -161,6 +174,7 @@ Both boards run the same code. Everything in `display_usage/` runs on the Pi (Py
 
 - `ClaudeApi` uses `requests`, which both Python 3 and MicroPython provide with the same interface.
 - `UsageMonitor` runs one loop that fetches and redraws; on the ESP32 it also keeps the `Wifi` connected.
+- Your `main.py` calls `main()` in the board's `app.py`, which reads `settings.json` and hands it to `build_monitor()` (`display_usage/settings.py`), which passes each section as keyword arguments to its class. So a new constructor argument is a new setting without further code.
 - `BaseDisplay` draws the whole screen with five primitives (`clear`, `show`, `text`, `textlength`, `rectangle`). Each board's `Oled_m154_7p` implements them for its display driver. To support another display or board, write such a subclass.
 
 The ESP32 has little memory: once the code is loaded and Wi-Fi is up, only about 100 KB are left, and each TLS connection needs most of it. MicroPython takes more memory for its own heap when that runs full and never gives it back, so the code on the board must stay small. That's why the ESP32 gets precompiled `.mpy` files (`make esp32`) and the fonts store their tables as `bytes` instead of tuples.

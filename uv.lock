@@ -12,6 +12,7 @@ develop = [
     { name = "freezegun" },
     { name = "ipdb" },
     { name = "luma-oled" },
+    { name = "mpy-cross" },
     { name = "pillow" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -21,6 +22,7 @@ develop = [
 testing = [
     { name = "freezegun" },
     { name = "luma-oled" },
+    { name = "mpy-cross" },
     { name = "pillow" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -34,6 +36,7 @@ requires-dist = [
     { name = "freezegun", marker = "extra == 'testing'", specifier = ">=1.5.5,<1.6" },
     { name = "ipdb", marker = "extra == 'develop'", specifier = ">=0.13.13,<0.14" },
     { name = "luma-oled", marker = "extra == 'testing'", specifier = ">=3.16,<3.17" },
+    { name = "mpy-cross", marker = "extra == 'testing'", specifier = ">=1.29,<1.30" },
     { name = "pillow", marker = "extra == 'testing'", specifier = ">=13,<13.1" },
     { name = "pytest", marker = "extra == 'testing'", specifier = ">=9.2,<9.3" },
     { name = "pytest-cov", marker = "extra == 'testing'", specifier = ">=7.1.0,<7.2" },
@@ -301,6 +304,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bd/c0/9f7c9a46090390368a4d7bcb76bb87a4a36c421e4c0792cdb53486ffac7a/matplotlib_inline-0.2.2.tar.gz", hash = "sha256:72f3fe8fce36b70d4a5b612f899090cd0401deddc4ea90e1572b9f4bfb058c79", size = 8150, upload-time = "2026-05-08T17:33:33.49Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/09/5b161152e2d90f7b87f781c2e1267494aef9c32498df793f73ad0a0a494a/matplotlib_inline-0.2.2-py3-none-any.whl", hash = "sha256:3c821cf1c209f59fb2d2d64abbf5b23b67bcb2210d663f9918dd851c6da1fcf6", size = 9534, upload-time = "2026-05-08T17:33:32.055Z" },
+]
+
+[[package]]
+name = "mpy-cross"
+version = "1.29.0.post2"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/58/d2b3e9f50109ab3de675efb23c902b8c8bfa281b4795ca4755153d2dd4ef/mpy_cross-1.29.0.post2-py2.py3-none-macosx_11_0_universal2.whl", hash = "sha256:bc050b78286ad81827b97e0081ca3b28159a3abfc417d2d6171a242e7ef34374", size = 1828831, upload-time = "2026-08-29T18:07:31.913Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/4a/7a2855405e2551b0f7ab0cf925def98c271200c77dfc1aab6e818b491058/mpy_cross-1.29.0.post2-py2.py3-none-manylinux1_i686.whl", hash = "sha256:6dd33410ab748a721df9b1216beae13cd588a00d6ee88e24ed7364d94b3dba76", size = 1050053, upload-time = "2026-08-29T18:07:33.695Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/ae/eb2e0af4e3799a6243e219d6e4d3e7382710502cd910900c376567999152/mpy_cross-1.29.0.post2-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:026f088706e7a4b19817ede9c22a9086e0dd837d58ec27243cd0bd742b3b6bde", size = 1055657, upload-time = "2026-08-29T18:07:35.804Z" },
+    { url = "https://files.pythonhosted.org/packages/87/47/bb24093fd426f174155dc8c8c38699d2b798815bb001c193e0a7318908a9/mpy_cross-1.29.0.post2-py2.py3-none-manylinux2014_aarch64.whl", hash = "sha256:688f9f9719a2626eccfd0e171b48541135b4cdd616f3674cd088dbd43a4c9b8f", size = 1154674, upload-time = "2026-08-29T18:07:37.578Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/85/3d48d8b42eb68829e654d0ad31c3ae2b125c1d1657495b89c05abfea96e7/mpy_cross-1.29.0.post2-py2.py3-none-manylinux2014_armv7l.whl", hash = "sha256:6bc4bf36c4abdb542bf49e6427790b5184f1248118504f034db469e278456724", size = 1058526, upload-time = "2026-08-29T18:07:39.722Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/4a/fea402be5a95a78e81d86c16dbb7522356a244c005d06348eb03a95fdf65/mpy_cross-1.29.0.post2-py2.py3-none-win32.whl", hash = "sha256:6a26e0a6f5b25984d0e1e45fc91598a30ada8c5daf9f60a937cdb4fd6e3f792f", size = 1085014, upload-time = "2026-08-29T18:07:41.475Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/44/e9c2000e8cc59dcfbfc143745865faf990051d4209dd84f6eed833383ed7/mpy_cross-1.29.0.post2-py2.py3-none-win_amd64.whl", hash = "sha256:3d598813b017d9c33b21e2bf523b78e4886fbf751748ca34d77aec2a2629fdc6", size = 1168669, upload-time = "2026-08-29T18:07:43.211Z" },
 ]
 
 [[package]]

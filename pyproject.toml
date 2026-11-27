@@ -15,6 +15,7 @@ dependencies = []
 testing = [
 	"freezegun>=1.5.5,<1.6",
 	"luma.oled>=3.16,<3.17",
+	"mpy-cross>=1.29,<1.30",  # compiles the ESP32 code (make esp32), same version as the firmware
 	"Pillow>=13,<13.1",
 	"pytest>=9.2,<9.3",
 	"pytest-cov>=7.1.0,<7.2",

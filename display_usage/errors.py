@@ -15,3 +15,7 @@ class CredentialsMissing(Exception):
 
 class WifiError(Exception):
     pass
+
+
+class SettingsError(Exception):
+    pass

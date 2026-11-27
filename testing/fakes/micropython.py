@@ -177,7 +177,7 @@ def install(monkeypatch):
     # cached as an attribute after its first import).
     import display_usage.esp32
 
-    for name in ("display", "font", "wifi"):
+    for name in ("app", "display", "font", "wifi"):
         monkeypatch.delitem(sys.modules, f"display_usage.esp32.{name}", raising=False)
         monkeypatch.delattr(display_usage.esp32, name, raising=False)
 

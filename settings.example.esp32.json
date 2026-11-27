@@ -1,0 +1,5 @@
+{
+	"wifi": {"ssid": "my-wifi-name", "password": "my-wifi-password"},
+	"timezone": {"utc_offset": 1, "dst": "eu"},
+	"display": {"flip": false}
+}

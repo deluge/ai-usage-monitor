@@ -17,11 +17,14 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      - name: Install dependencies
+        run: uv sync --locked --extra testing
+
       - name: Check formatting
-        run: uvx ruff@0.17.3 format --check --diff .
+        run: uv run ruff format --check --diff .
 
       - name: Check lint rules
-        run: uvx ruff@0.17.3 check --output-format=github .
+        run: uv run ruff check --output-format=github .
 
   tests:
     runs-on: ubuntu-26.04
@@ -40,3 +43,22 @@ jobs:
 
       - name: Run tests
         run: make coverage
+
+  # The tests run with CPython; this catches code that MicroPython can't compile.
+  esp32:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --locked --extra testing
+
+      - name: Compile the ESP32 code
+        run: make esp32
