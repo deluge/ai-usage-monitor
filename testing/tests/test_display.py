@@ -1,12 +1,10 @@
-import datetime
-
 import pytest
 from freezegun import freeze_time
-from luma.core.device import dummy
-from PIL import ImageChops
 
-from display_usage import display as display_module
-from display_usage.display import BaseDisplay, Oled_m154_7p
+from conftest import NOW
+from display_usage.display import BaseDisplay
+from display_usage.utils import Timezone
+from testing.fakes.display import PrimitivesDisplay
 
 
 USAGE = {
@@ -16,130 +14,133 @@ USAGE = {
 
 
 @pytest.fixture
-def created():
-    return {}
+def screen():
+    return PrimitivesDisplay()
 
 
-@pytest.fixture
-def fake_hardware(monkeypatch, created):
-    """Replace SPI and the controller with luma's in-memory dummy device."""
-
-    def fake_spi(**kwargs):
-        created["spi"] = kwargs
-        return "serial"
-
-    def fake_controller(serial, width, height, rotate):
-        created["controller"] = (serial, width, height, rotate)
-        device = dummy(width=width, height=height, rotate=rotate, mode="1")
-        device.contrast = lambda level: created.setdefault("contrast", level)
-        return device
-
-    monkeypatch.setattr(display_module, "spi", fake_spi)
-    monkeypatch.setitem(display_module.CONTROLLERS, "ssd1309", fake_controller)
+def bar_fill(screen, top):
+    """Right edge of the filled part of the bar starting at top, or None if empty."""
+    for left, rect_top, right, _, fill in screen.rectangles():
+        if fill and rect_top == top + 1:
+            return right
+    return None
 
 
-@pytest.fixture
-def oled(fake_hardware):
-    return Oled_m154_7p()
+def test_default_timezone():
+    assert BaseDisplay().timezone.utc_offset is None
 
 
-def lit_pixels(image, box=None):
-    image = image.crop(box) if box else image
-    return sum(image.convert("L").histogram()[1:])
+def test_timezone():
+    timezone = Timezone(1)
+
+    assert BaseDisplay(timezone).timezone is timezone
 
 
-def test_base_display_methods_must_be_implemented():
+@pytest.mark.parametrize(
+    "method, args",
+    [
+        ("clear", ()),
+        ("show", ()),
+        ("text", (0, 0, "x", None)),
+        ("textlength", ("x", None)),
+        ("rectangle", (0, 0, 1, 1)),
+    ],
+)
+def test_primitives_must_be_implemented(method, args):
     with pytest.raises(NotImplementedError):
-        BaseDisplay().show_message("x")
-    with pytest.raises(NotImplementedError):
-        BaseDisplay().show_usage(USAGE)
+        getattr(BaseDisplay(), method)(*args)
 
 
-def test_init(oled, created):
-    assert created["spi"] == {
-        "port": 0,
-        "device": 0,
-        "gpio_DC": 24,
-        "gpio_RST": 25,
-        "bus_speed_hz": 8_000_000,
-    }
-    assert created["controller"] == ("serial", 128, 64, 0)
-    assert created["contrast"] == 200
+def test_show_message(screen):
+    screen.show_message("First", "Second")
+
+    assert screen.calls == [
+        ("clear",),
+        ("text", 0, 0, "First", "font"),
+        ("text", 0, 14, "Second", "font"),
+        ("show",),
+    ]
 
 
-def test_unknown_controller(fake_hardware):
-    with pytest.raises(KeyError):
-        Oled_m154_7p(controller="unknown")
+@pytest.mark.parametrize("dots, text", [(1, "Loading."), (3, "Loading...")])
+def test_show_loading(screen, dots, text):
+    screen.show_loading(dots)
+
+    assert screen.calls == [("clear",), ("text", 0, 26, text, "font"), ("show",)]
 
 
-def test_show_loading(oled):
-    oled.show_loading(1)
-    one_dot = oled.device.image.copy()
+def test_show_loading_default_dots(screen):
+    screen.show_loading()
 
-    oled.show_loading()
-
-    assert lit_pixels(oled.device.image) > lit_pixels(one_dot)
-
-
-def test_show_message(oled):
-    oled.show_message("First", "", "Third")
-
-    image = oled.device.image
-    assert lit_pixels(image, (0, 0, 128, 14)) > 0
-    assert lit_pixels(image, (0, 14, 128, 28)) == 0
-    assert lit_pixels(image, (0, 28, 128, 42)) > 0
+    assert screen.texts() == ["Loading..."]
 
 
 @freeze_time("2026-11-24 12:00:00")
 class TestShowUsage:
-    def test_draws_both_blocks_and_divider(self, oled):
-        oled.show_usage(USAGE)
+    def test_layout(self, screen):
+        screen.show_usage(USAGE)
 
-        image = oled.device.image
-        assert lit_pixels(image, (0, 31, 128, 32)) == 128
-        assert lit_pixels(image, (0, 0, 128, 31)) > 0
-        assert lit_pixels(image, (0, 32, 128, 64)) > 0
+        assert screen.calls[0] == ("clear",)
+        assert screen.calls[-1] == ("show",)
+        # "42%" is 18 px wide: it starts at 110 and the bar ends 4 px before it.
+        # The bar is 52 px wide inside, 42% of it fills 21 px.
+        assert screen.calls[1:-1] == [
+            ("text", 0, 0, "Current", "font"),
+            ("rectangle", 52, 3, 106, 10, False),
+            ("rectangle", 53, 4, 53 + 21, 9, True),
+            ("text", 110, 0, "42%", "font"),
+            ("text", 0, 14, "Reset 14:30 (2h30)", "small"),
+            ("rectangle", 0, 31, 127, 31, True),
+            ("text", 0, 34, "Weekly", "font"),
+            ("rectangle", 52, 37, 106, 44, False),
+            ("rectangle", 53, 38, 53 + 45, 43, True),
+            ("text", 110, 34, "88%", "font"),
+            ("text", 0, 48, "Reset Fri 27.11. 09:00", "small"),
+        ]
 
-    def test_bar_grows_with_utilization(self, oled):
-        oled.show_usage({"five_hour": {"utilization": 10}})
-        low = lit_pixels(oled.device.image, (oled.BAR_LEFT + 1, 4, 100, 9))
+    def test_uses_timezone(self):
+        screen = PrimitivesDisplay(Timezone(1))
 
-        oled.show_usage({"five_hour": {"utilization": 90}})
-        high = lit_pixels(oled.device.image, (oled.BAR_LEFT + 1, 4, 100, 9))
+        screen.show_usage(USAGE)
 
-        assert high > low
+        assert "Reset 15:30 (2h30)" in screen.texts()
+        assert "Reset Fri 27.11. 10:00" in screen.texts()
 
-    def test_utilization_is_clamped(self, oled):
-        oled.show_usage({"five_hour": {"utilization": 100}})
-        full = oled.device.image.copy()
+    @pytest.mark.parametrize(
+        "utilization, text, fill",
+        [(0, "0%", None), (None, "0%", None), (100, "100%", 53 + 46), (250, "100%", 53 + 46)],
+    )
+    def test_utilization_is_clamped(self, screen, utilization, text, fill):
+        screen.show_usage({"five_hour": {"utilization": utilization}})
 
-        oled.show_usage({"five_hour": {"utilization": 250}})
+        assert screen.texts()[1] == text
+        assert bar_fill(screen, 3) == fill
 
-        assert ImageChops.difference(full, oled.device.image).getbbox() is None
-
-    def test_expired_window_shows_empty_bar(self, oled):
-        oled.show_usage({"five_hour": {"utilization": 0}})
-        empty = oled.device.image.copy()
-
-        oled.show_usage(
+    def test_expired_window_is_empty(self, screen):
+        screen.show_usage(
             {"five_hour": {"utilization": 90, "resets_at": "2026-11-24T11:59:00+00:00"}}
         )
 
-        assert ImageChops.difference(empty, oled.device.image).getbbox() is None
+        assert screen.texts()[:3] == ["Current", "0%", "Reset: --"]
+        assert bar_fill(screen, 3) is None
 
-    def test_old_data_replaces_weekly_reset(self, oled):
-        oled.show_usage(USAGE)
-        weekly_reset = oled.device.image.crop((0, 48, 128, 64))
+    def test_old_data_replaces_weekly_reset(self, screen):
+        updated_at = NOW - 3600
 
-        oled.show_usage(USAGE, updated_at=datetime.datetime(2026, 11, 24, 11, 0))
+        screen.show_usage(USAGE, updated_at=updated_at)
 
-        changed = ImageChops.difference(weekly_reset, oled.device.image.crop((0, 48, 128, 64)))
-        assert changed.getbbox() is not None
+        assert screen.texts()[-1] == "Data from Tue 11:00"
+        assert "Reset Fri 27.11. 09:00" not in screen.texts()
+        assert "Reset 14:30 (2h30)" in screen.texts()
 
-    def test_missing_data(self, oled):
-        oled.show_usage({"five_hour": None})
-        empty = oled.device.image.copy()
+    def test_old_data_uses_timezone(self):
+        screen = PrimitivesDisplay(Timezone(1))
 
-        oled.show_usage({"five_hour": {"utilization": 0}, "seven_day": {}})
+        screen.show_usage(USAGE, updated_at=NOW - 3600)
 
-        assert ImageChops.difference(empty, oled.device.image).getbbox() is None
+        assert screen.texts()[-1] == "Data from Tue 12:00"
+
+    def test_missing_data(self, screen):
+        screen.show_usage({"five_hour": None})
+
+        assert screen.texts() == ["Current", "0%", "Reset: --", "Weekly", "0%", "Reset: --"]

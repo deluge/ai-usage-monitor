@@ -1,11 +1,10 @@
-import datetime
-
 import pytest
 from freezegun import freeze_time
 
 from conftest import NOW
 from display_usage import monitor as monitor_module
 from display_usage.api import TOKEN_URLS, USAGE_URL
+from display_usage.errors import CredentialsMissing, WifiError
 from display_usage.monitor import (
     API_ERROR_RETRY_DELAY,
     AUTH_RETRY_DELAYS,
@@ -13,9 +12,11 @@ from display_usage.monitor import (
     NO_CREDENTIALS_RETRY_DELAY,
     RATE_LIMIT_MAX_DELAY,
     STALE_AFTER,
+    WIFI_ERROR_RETRY_DELAY,
+    WIFI_WAIT_DELAY,
     UsageMonitor,
 )
-from testing.fakes.api import FakeApi, http_error
+from testing.fakes.api import FakeApi, FakeWifi, http_error
 
 
 USAGE = {"five_hour": {"utilization": 12.0}, "seven_day": {"utilization": 34.0}}
@@ -25,13 +26,12 @@ class StopLoop(Exception):
     pass
 
 
-def make_monitor(display, *results):
-    return UsageMonitor(FakeApi(*results), display)
+def make_monitor(display, *results, wifi=None):
+    return UsageMonitor(FakeApi(*results), display, wifi=wifi)
 
 
 def state(monitor):
-    """The monitor state without the time of the last update."""
-    return {key: value for key, value in monitor.state.items() if key != "updated_at"}
+    return {"usage": monitor.usage, "error": monitor.error, "fatal": monitor.fatal}
 
 
 def test_success(display):
@@ -46,10 +46,10 @@ def test_success_resets_failures_and_clears_error(display):
     monitor.auth_failures = monitor.rate_limit_failures = 2
 
     monitor.fetch_once()
-    assert monitor.state["error"] is not None
+    assert monitor.error is not None
 
     monitor.fetch_once()
-    assert monitor.state["error"] is None
+    assert monitor.error is None
     assert (monitor.auth_failures, monitor.rate_limit_failures) == (0, 0)
 
 
@@ -70,8 +70,8 @@ class TestAuthErrors:
         assert state(monitor) == {"usage": None, "error": None, "fatal": False}
 
         monitor.fetch_once()
-        assert monitor.state["error"] == ("API error", "HTTP 403", "Check token")
-        assert monitor.state["fatal"] is True
+        assert monitor.error == ("API error", "HTTP 403", "Check token")
+        assert monitor.fatal is True
 
     @pytest.mark.parametrize(
         "url, code, expected",
@@ -92,19 +92,18 @@ def test_api_error(display):
     monitor = make_monitor(display, http_error(USAGE_URL, 500))
 
     assert monitor.fetch_once() == API_ERROR_RETRY_DELAY
-    assert monitor.state["error"] == ("API error", "HTTP 500", "")
-    assert monitor.state["fatal"] is True
+    assert monitor.error == ("API error", "HTTP 500", "")
+    assert monitor.fatal is True
 
 
 class TestRateLimit:
     def test_retry_after_seconds(self, display):
-        monitor = make_monitor(
-            display, http_error(USAGE_URL, 429, headers={"Retry-After": "90"})
-        )
+        error = http_error(USAGE_URL, 429, headers={"Retry-After": "90"})
+        monitor = make_monitor(display, error)
 
         assert monitor.fetch_once() == 90
-        assert monitor.state["error"] == ("Rate limited", "Retry in 2 min", "")
-        assert monitor.state["fatal"] is True
+        assert monitor.error == ("Rate limited", "Retry in 2 min", "")
+        assert monitor.fatal is True
 
     def test_exponential_backoff(self, display):
         errors = [http_error(USAGE_URL, 429) for _ in range(5)]
@@ -133,6 +132,12 @@ class TestParseRetryAfter:
     def test_http_date(self):
         assert UsageMonitor.parse_retry_after("Tue, 24 Nov 2026 12:05:00 GMT") == 300
 
+    def test_http_date_on_micropython(self, monkeypatch):
+        monkeypatch.setattr(monitor_module, "parsedate_to_datetime", None)
+
+        assert UsageMonitor.parse_retry_after("Tue, 24 Nov 2026 12:05:00 GMT") is None
+        assert UsageMonitor.parse_retry_after("300") == 300
+
     def test_clamped(self):
         assert UsageMonitor.parse_retry_after("1") == NETWORK_ERROR_RETRY_DELAY
         assert UsageMonitor.parse_retry_after("99999") == RATE_LIMIT_MAX_DELAY
@@ -142,13 +147,40 @@ class TestParseRetryAfter:
         )
 
 
-def test_missing_credentials(display, monkeypatch):
-    monkeypatch.setenv("HOME", "/home/pi")
-    monitor = make_monitor(display, FileNotFoundError())
+class TestMissingCredentials:
+    def test_with_directory(self, display):
+        monitor = make_monitor(display, CredentialsMissing())
 
-    assert monitor.fetch_once() == NO_CREDENTIALS_RETRY_DELAY
-    assert monitor.state["error"] == ("No credentials", "~/.usage-monitor/", "credentials.json")
-    assert monitor.state["fatal"] is True
+        assert monitor.fetch_once() == NO_CREDENTIALS_RETRY_DELAY
+        assert monitor.error == ("No credentials", "~/.usage-monitor/", "credentials.json")
+        assert monitor.fatal is True
+
+    def test_without_directory(self, display):
+        """The ESP32 keeps the credentials next to main.py."""
+        monitor = UsageMonitor(
+            FakeApi(CredentialsMissing(), credentials_file="credentials.json"), display
+        )
+
+        monitor.fetch_once()
+
+        assert monitor.error == ("No credentials", "", "credentials.json")
+
+
+class TestWifi:
+    def test_waits_until_connected(self, display):
+        monitor = make_monitor(display, USAGE, wifi=FakeWifi(False, True))
+
+        assert monitor.fetch_once() == WIFI_WAIT_DELAY
+        assert monitor.usage is None
+        assert monitor.fetch_once() == monitor.api_request_interval
+        assert monitor.usage == USAGE
+
+    def test_error(self, display):
+        monitor = make_monitor(display, wifi=FakeWifi(WifiError("Wrong password")))
+
+        assert monitor.fetch_once() == WIFI_ERROR_RETRY_DELAY
+        assert monitor.error == ("Wi-Fi error", "Home", "Wrong password")
+        assert monitor.fatal is True
 
 
 class TestNetworkError:
@@ -209,7 +241,7 @@ def test_success_remembers_time(display):
 
     monitor.fetch_once()
 
-    assert monitor.state["updated_at"] == NOW
+    assert monitor.updated_at == NOW
 
 
 class TestStaleUsage:
@@ -231,85 +263,61 @@ class TestStaleUsage:
     def test_network_error(self, display):
         last_call = self.render_after(display, STALE_AFTER + 1, OSError("down"))
 
-        assert last_call == ("usage", USAGE, datetime.datetime(2026, 11, 24, 12, 0))
+        assert last_call == ("usage", USAGE, NOW)
 
     def test_rate_limit(self, display):
         error = http_error(USAGE_URL, 429)
 
         last_call = self.render_after(display, STALE_AFTER + 1, error)
 
-        assert last_call == ("usage", USAGE, datetime.datetime(2026, 11, 24, 12, 0))
+        assert last_call == ("usage", USAGE, NOW)
 
     def test_long_request_interval(self, display):
         """With a long interval, old data is normal: wait for 3 missed fetches."""
         assert self.render_after(display, 3 * 600, interval=600) == ("usage", USAGE)
-        last_call = self.render_after(display, 3 * 600 + 1, interval=600)
-        assert last_call[2] == datetime.datetime(2026, 11, 24, 12, 0)
+        assert self.render_after(display, 3 * 600 + 1, interval=600) == ("usage", USAGE, NOW)
 
 
-class TestLoadingScreen:
-    def test_animates_until_usage_arrives(self, display, monkeypatch):
-        monitor = make_monitor(display, USAGE)
+class TestRun:
+    def run(self, monitor, monkeypatch, frames):
+        """Run the loop for the given number of frames."""
         sleeps = []
 
         def sleep(seconds):
             sleeps.append(seconds)
-            if len(sleeps) == 4:
-                monitor.fetch_once()
+            if len(sleeps) == frames:
+                raise StopLoop
 
         monkeypatch.setattr(monitor_module.time, "sleep", sleep)
+        with pytest.raises(StopLoop):
+            monitor.run()
+        return sleeps
 
-        monitor.loading_screen()
+    def test_loading_animation_until_usage_arrives(self, display, monkeypatch):
+        monitor = make_monitor(display, USAGE, wifi=FakeWifi(False, False, False, False, True))
 
-        assert display.calls == [("loading", 1), ("loading", 2), ("loading", 3), ("loading", 1)]
-        assert sleeps == [0.5] * 4
+        sleeps = self.run(monitor, monkeypatch, frames=10)
 
-    def test_stops_on_fatal_error(self, display):
-        monitor = make_monitor(display)
-        monitor.show_fatal_error("API error", "HTTP 500", "")
+        # Wi-Fi is checked every WIFI_WAIT_DELAY (2 frames) and connects on the 5th check.
+        assert display.calls == [
+            *[("loading", dots) for dots in (1, 2, 3, 1, 2, 3, 1, 2)],
+            ("usage", USAGE),
+        ]
+        assert sleeps == [0.5] * 10
 
-        monitor.loading_screen()
+    def test_redraws_and_fetches_on_schedule(self, display, monkeypatch):
+        monitor = make_monitor(display, USAGE, {"five_hour": {}})
+        monitor.api_request_interval = 3
+        monitor.display_refresh_interval = 1
 
-        assert display.calls == []
+        self.run(monitor, monkeypatch, frames=8)
 
+        # Redraw every 2 frames (1 s), new data after 6 frames (3 s), shown right away.
+        assert [call[1] for call in display.calls] == [USAGE, USAGE, USAGE, {"five_hour": {}}]
 
-def test_fetch_loop_sleeps_returned_delay(display, monkeypatch):
-    monitor = make_monitor(display, USAGE, http_error(USAGE_URL, 500))
-    sleeps = []
+    def test_error_leaves_loading_screen(self, display, monkeypatch):
+        monitor = make_monitor(display, http_error(USAGE_URL, 500))
 
-    def sleep(seconds):
-        sleeps.append(seconds)
-        if len(sleeps) == 2:
-            raise StopLoop
+        self.run(monitor, monkeypatch, frames=1)
 
-    monkeypatch.setattr(monitor_module.time, "sleep", sleep)
-
-    with pytest.raises(StopLoop):
-        monitor.fetch_loop()
-
-    assert sleeps == [monitor.api_request_interval, API_ERROR_RETRY_DELAY]
-
-
-def test_run(display, monkeypatch):
-    monitor = make_monitor(display, USAGE)
-    started = []
-
-    class FakeThread:
-        def __init__(self, target, daemon):
-            started.append((target, daemon))
-            target.__self__.fetch_once()  # instead of the endless fetch loop
-
-        def start(self):
-            pass
-
-    def sleep(seconds):
-        raise StopLoop
-
-    monkeypatch.setattr(monitor_module.threading, "Thread", FakeThread)
-    monkeypatch.setattr(monitor_module.time, "sleep", sleep)
-
-    with pytest.raises(StopLoop):
-        monitor.run()
-
-    assert started == [(monitor.fetch_loop, True)]
-    assert display.calls == [("usage", USAGE)]
+        assert display.calls == [("message", ("API error", "HTTP 500", ""))]

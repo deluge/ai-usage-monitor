@@ -5,6 +5,7 @@ import pytest
 
 from display_usage import api as api_module
 from display_usage.api import ClaudeApi
+from testing.fakes import micropython
 from testing.fakes.api import FakeServer
 from testing.fakes.display import FakeDisplay
 
@@ -15,11 +16,7 @@ NOW = 1795521600
 
 @pytest.fixture(autouse=True)
 def utc_timezone(monkeypatch):
-    """Run every test in UTC, like the CI, whatever the local timezone is.
-
-    freezegun freezes naive local time at the given UTC time, so code calling
-    datetime.now().astimezone() would be off by the local UTC offset.
-    """
+    """Run every test in UTC, like the CI, whatever the local timezone is."""
     monkeypatch.setenv("TZ", "UTC")
     time.tzset()
     yield
@@ -55,7 +52,7 @@ def read_credentials(credentials_file):
 @pytest.fixture
 def server(monkeypatch):
     server = FakeServer()
-    monkeypatch.setattr(api_module.urllib.request, "urlopen", server)
+    monkeypatch.setattr(api_module.requests, "request", server)
     return server
 
 
@@ -67,3 +64,9 @@ def api(credentials_file, server):
 @pytest.fixture
 def display():
     return FakeDisplay()
+
+
+@pytest.fixture
+def micropython_modules(monkeypatch):
+    """Fake machine, network, framebuf, ... modules; returns (clock, network)."""
+    return micropython.install(monkeypatch)

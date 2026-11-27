@@ -25,6 +25,7 @@ credentials.json
 .credentials.json
 *.tmp
 
-# Your own start script (see README, step 6) #
-###############################################
-show_my_usage.py
+# Your own start script and settings (see the board guides) #
+##############################################################
+/main.py
+/settings.json

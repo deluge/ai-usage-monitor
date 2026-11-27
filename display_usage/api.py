@@ -1,7 +1,7 @@
 """
 Access to the Claude usage data.
 
-Credentials file: ~/.usage-monitor/credentials.json
+Credentials file: ~/.usage-monitor/credentials.json on the Pi, credentials.json on the ESP32
   {"claudeAiOauth": {"accessToken": "...", "refreshToken": "...",
                      "expiresAt": 1234567890000}}
 
@@ -9,16 +9,17 @@ Note: /api/oauth/usage is an undocumented endpoint (the one Claude Code itself
 uses for /usage). Anthropic may change or remove it at any time.
 """
 
+import gc
 import json
 import os
-import time
-import urllib.error
-import urllib.request
 
-from display_usage.utils import log, read_error_body
+import requests
+
+from display_usage.errors import CredentialsMissing, HttpError
+from display_usage.utils import MICROPYTHON, log, unix_time
 
 
-CREDENTIALS_FILE = os.path.expanduser("~/.usage-monitor/credentials.json")
+CREDENTIALS_FILE = "credentials.json" if MICROPYTHON else "~/.usage-monitor/credentials.json"
 USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 TOKEN_URLS = [
     "https://platform.claude.com/v1/oauth/token",
@@ -29,15 +30,24 @@ USER_AGENT = "claude-code/2.0.0"
 TOKEN_REFRESH_BUFFER = 300  # refresh the token 5 minutes before it expires
 
 
+def expand_user(path):
+    try:
+        from os.path import expanduser
+    except ImportError:
+        return path
+    return expanduser(path)
+
+
 class ClaudeApi:
     def __init__(self, credentials_file=CREDENTIALS_FILE, timeout=20):
-        self.credentials_file = os.path.expanduser(credentials_file)
+        self.credentials_file = credentials_file
+        self.credentials_path = expand_user(credentials_file)
         self.timeout = timeout
 
     def fetch_usage(self):
         try:
             return self.request_usage(self.get_token())
-        except urllib.error.HTTPError as error:
+        except HttpError as error:
             if error.code != 401:
                 raise
         # The token was rejected before its expiry time (e.g. revoked because
@@ -55,17 +65,17 @@ class ClaudeApi:
     def get_token(self, force_refresh=False):
         """Return a usable access token, refreshing it if needed.
 
-        Raises the HTTPError of a failed refresh unless the old token is still
+        Raises the HttpError of a failed refresh unless the old token is still
         valid, so that a broken login is not hammered with doomed requests.
         """
         credentials = self.read_credentials()
         oauth = credentials["claudeAiOauth"]
-        expires_at = oauth.get("expiresAt", 0) / 1000
-        if force_refresh or expires_at < time.time() + TOKEN_REFRESH_BUFFER:
+        expires_at = oauth.get("expiresAt", 0) // 1000
+        if force_refresh or expires_at < unix_time() + TOKEN_REFRESH_BUFFER:
             try:
                 self.refresh_token(credentials)
-            except urllib.error.HTTPError:
-                if force_refresh or expires_at <= time.time():
+            except HttpError:
+                if force_refresh or expires_at <= unix_time():
                     raise
                 # Still valid for a few minutes: use it, refresh again next time.
         return oauth["accessToken"]
@@ -76,8 +86,8 @@ class ClaudeApi:
         oauth["accessToken"] = token_response["access_token"]
         if token_response.get("refresh_token"):
             oauth["refreshToken"] = token_response["refresh_token"]
-        expires_in = token_response.get("expires_in", 3600)
-        oauth["expiresAt"] = int((time.time() + expires_in) * 1000)
+        expires_in = int(token_response.get("expires_in", 3600))
+        oauth["expiresAt"] = (unix_time() + expires_in) * 1000
         self.write_credentials(credentials)
         log("Token refreshed.")
 
@@ -97,8 +107,8 @@ class ClaudeApi:
         for url in TOKEN_URLS:
             try:
                 return self.request_json(url, body=body)
-            except urllib.error.HTTPError as error:
-                log(f"Token refresh at {url}: HTTP {error.code} {read_error_body(error, 300)}")
+            except HttpError as error:
+                log(f"Token refresh at {url}: HTTP {error.code} {error.body[:300]}")
                 last_error = error
                 if error.code == 429:
                     break
@@ -106,25 +116,36 @@ class ClaudeApi:
 
     def request_json(self, url, headers=None, body=None):
         """GET the url, or POST the body if one is given, and return the JSON response."""
-        request = urllib.request.Request(
+        all_headers = {"Content-Type": "application/json", "User-Agent": USER_AGENT}
+        all_headers.update(headers or {})
+        gc.collect()  # the ESP32 needs a large block of free memory for TLS
+        response = requests.request(
+            "GET" if body is None else "POST",
             url,
-            data=None if body is None else json.dumps(body).encode(),
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": USER_AGENT,
-                **(headers or {}),
-            },
+            data=None if body is None else json.dumps(body),
+            headers=all_headers,
+            timeout=self.timeout,
         )
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
-            return json.load(response)
+        try:
+            if response.status_code >= 400:
+                raise HttpError(
+                    response.status_code, url, response.text[:500], response.headers
+                )
+            return response.json()
+        finally:
+            response.close()
 
     def read_credentials(self):
-        with open(self.credentials_file) as credentials_handle:
-            return json.load(credentials_handle)
+        try:
+            with open(self.credentials_path) as credentials_handle:
+                return json.load(credentials_handle)
+        except OSError:
+            raise CredentialsMissing(self.credentials_file)
 
     def write_credentials(self, data):
-        temporary_path = self.credentials_file + ".tmp"
+        temporary_path = self.credentials_path + ".tmp"
         with open(temporary_path, "w") as temporary_handle:
-            json.dump(data, temporary_handle, indent=2)
-        os.chmod(temporary_path, 0o600)
-        os.replace(temporary_path, self.credentials_file)
+            json.dump(data, temporary_handle)
+        if hasattr(os, "chmod"):
+            os.chmod(temporary_path, 0o600)
+        os.rename(temporary_path, self.credentials_path)
