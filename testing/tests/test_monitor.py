@@ -148,22 +148,23 @@ class TestParseRetryAfter:
 
 
 class TestMissingCredentials:
-    def test_with_directory(self, display):
+    def test_without_directory(self, display):
+        """By default the credentials are next to main.py."""
         monitor = make_monitor(display, CredentialsMissing())
 
         assert monitor.fetch_once() == NO_CREDENTIALS_RETRY_DELAY
-        assert monitor.error == ("No credentials", "~/.usage-monitor/", "credentials.json")
+        assert monitor.error == ("No credentials", "", "credentials.json")
         assert monitor.fatal is True
 
-    def test_without_directory(self, display):
-        """The ESP32 keeps the credentials next to main.py."""
+    def test_with_directory(self, display):
+        """credentials_file in the api settings can point elsewhere."""
         monitor = UsageMonitor(
-            FakeApi(CredentialsMissing(), credentials_file="credentials.json"), display
+            FakeApi(CredentialsMissing(), credentials_file="~/login/credentials.json"), display
         )
 
         monitor.fetch_once()
 
-        assert monitor.error == ("No credentials", "", "credentials.json")
+        assert monitor.error == ("No credentials", "~/login/", "credentials.json")
 
 
 class TestWifi:

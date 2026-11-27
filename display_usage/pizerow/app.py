@@ -1,7 +1,7 @@
 """
 Start the display on the Raspberry Pi. Your main.py (see README_RASPBERRY_PI.md) calls main().
 
-The settings are read from ~/.usage-monitor/settings.json (see display_usage/settings.py).
+settings.json and credentials.json are read from the project folder (see settings.py).
 """
 
 import os
@@ -10,9 +10,13 @@ from display_usage.pizerow.display import Oled_m154_7p
 from display_usage.settings import build_monitor, load_settings
 
 
-SETTINGS_FILE = "~/.usage-monitor/settings.json"
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SETTINGS_FILE = "settings.json"
 
 
 def main(settings_file=SETTINGS_FILE):
-    settings = load_settings(os.path.expanduser(settings_file))
+    # Relative paths (settings.json, credentials.json) are relative to the project folder,
+    # wherever main.py is started from.
+    os.chdir(PROJECT_DIR)
+    settings = load_settings(settings_file)
     build_monitor(settings, Oled_m154_7p).run()

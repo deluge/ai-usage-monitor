@@ -1,7 +1,7 @@
 """
 Access to the Claude usage data.
 
-Credentials file: ~/.usage-monitor/credentials.json on the Pi, credentials.json on the ESP32
+Credentials file: credentials.json in the project folder (Pi) or on the board (ESP32)
   {"claudeAiOauth": {"accessToken": "...", "refreshToken": "...",
                      "expiresAt": 1234567890000}}
 
@@ -16,10 +16,10 @@ import os
 import requests
 
 from display_usage.errors import CredentialsMissing, HttpError
-from display_usage.utils import MICROPYTHON, log, unix_time
+from display_usage.utils import log, unix_time
 
 
-CREDENTIALS_FILE = "credentials.json" if MICROPYTHON else "~/.usage-monitor/credentials.json"
+CREDENTIALS_FILE = "credentials.json"
 USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 TOKEN_URLS = [
     "https://platform.claude.com/v1/oauth/token",

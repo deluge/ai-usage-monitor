@@ -91,7 +91,7 @@ Read the stored credentials on your computer:
 - **Windows**: `%USERPROFILE%\.claude\.credentials.json` (hidden file; in PowerShell: `notepad $env:USERPROFILE\.claude\.credentials.json`)
 - **Linux**: `cat ~/.claude/.credentials.json`
 
-The output is a JSON object containing `claudeAiOauth`. When you put it on the board, change the value after `"expiresAt":` to `0`. This makes the board refresh the token right away, so it gets its own login (see [Sharing the login](#sharing-the-login-between-board-and-computer)). The result looks like `credentials.example.json`.
+The output is a JSON object containing `claudeAiOauth`. When you save it as `credentials.json` in the project folder, change the value after `"expiresAt":` to `0`. This makes the board refresh the token right away, so it gets its own login (see [Sharing the login](#sharing-the-login-between-board-and-computer)). The result looks like `credentials.example.json`.
 
 > [!IMPORTANT]
 > These credentials give full access to your Claude account. Never commit them to Git or share them. The `.gitignore` excludes `credentials.json`.
@@ -108,7 +108,9 @@ You only need to copy the credentials again if the board was off for a long time
 
 ## Configuration
 
-Each board is started by a small `main.py` you create from the board guide; it reads your settings from a JSON file, `settings.json` (on the Pi in `~/.usage-monitor/`, on the ESP32 in the project folder, copied to the board). Both files are yours: they are listed in `.gitignore`, so `git pull` never overwrites them. It has one section per part, and every setting is optional; leave out what you don't change:
+On both boards your own files live in the project folder: `main.py` starts the display (create it from the board guide), `settings.json` holds your settings and `credentials.json` your Claude login. They are listed in `.gitignore`, so they never end up in Git and `git pull` never overwrites them. The ESP32 gets copies of them (`make esp32-install`).
+
+`settings.json` has one section per part, and every setting is optional; leave out what you don't change:
 
 ```json
 {
@@ -125,7 +127,7 @@ The sections below are the same on both boards; the `display` and `wifi` (ESP32 
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `credentials_file` | Pi: `~/.usage-monitor/credentials.json`, ESP32: `credentials.json` | Where your login credentials are stored |
+| `credentials_file` | `credentials.json` | Where your login credentials are stored, relative to the project folder (Pi) or the board's root (ESP32) |
 | `timeout` | `20` | Seconds to wait for an API response |
 
 **`monitor`**
@@ -158,7 +160,7 @@ These apply to both boards. See the board guides for wiring, network and startup
 The boards don't need any of this; it's only for working on the code on your computer. Install [uv](https://docs.astral.sh/uv/), then:
 
 ```bash
-make devinstall   # installs pytest, ruff, mpy-cross and ipdb into .venv (versions from uv.lock)
+make devinstall   # installs pytest, ruff, ipdb and the ESP32 tools (esptool, mpremote, mpy-cross) into .venv (versions from uv.lock)
 make check        # check formatting and lint rules (same as the GitHub workflow)
 make correct      # fix formatting and lint issues
 make tests        # run the tests (ARGS="-k monitor" to pass options to pytest)

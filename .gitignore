@@ -19,13 +19,13 @@ __pycache__/
 htmlcov/
 ~*
 
+# Your own files in the project folder (see the board guides) #
+################################################################
+/main.py
+/settings.json
+
 # Never commit your Claude login #
 ##################################
 credentials.json
 .credentials.json
 *.tmp
-
-# Your own start script and settings (see the board guides) #
-##############################################################
-/main.py
-/settings.json

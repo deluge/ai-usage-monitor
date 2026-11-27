@@ -32,8 +32,8 @@ def expire_token(credentials_file, expires_at=NOW):
 def test_default_credentials_file():
     api = ClaudeApi()
 
-    assert api.credentials_file == "~/.usage-monitor/credentials.json"
-    assert api.credentials_path == os.path.expanduser("~/.usage-monitor/credentials.json")
+    assert api.credentials_file == "credentials.json"
+    assert api.credentials_path == "credentials.json"
 
 
 def test_expand_user_without_os_path(monkeypatch):

@@ -31,7 +31,7 @@ You do all of this from your computer, with the ESP32 connected over USB. Your c
 pip install esptool mpremote mpy-cross
 ```
 
-With [uv](https://docs.astral.sh/uv/) you can use `uv tool install` for each of them instead. If you work on the code, `make devinstall` already puts mpy-cross into the project's `.venv`, and the `make` commands find it there.
+Or, with [uv](https://docs.astral.sh/uv/), run `make devinstall` in the project folder after step 3: it installs all three into the project's `.venv` at the versions in `uv.lock`, and the `make` commands find them there. Run esptool and mpremote from there with `uv run`, e.g. `uv run esptool …`.
 
 ### 1. Flash MicroPython
 
@@ -69,18 +69,18 @@ cd ~/ai-usage-monitor
 
 Follow [Get your Claude login credentials](README.md#get-your-claude-login-credentials) in the main README.
 
-### 5. Put the credentials on the ESP32
-
-Save the credentials as `credentials.json` in the project folder (the `.gitignore` excludes it), change the value after `"expiresAt":` to `0`, then copy the file to the board and delete the local copy:
+### 5. Save the credentials in the project folder
 
 ```bash
-mpremote cp credentials.json :credentials.json
-rm credentials.json
+nano credentials.json
+chmod 600 credentials.json
 ```
+
+Paste the credentials and change the value after `"expiresAt":` to `0`. The file is listed in `.gitignore`, so it never ends up in Git. Step 8 copies it to the board.
 
 ### 6. Create your settings
 
-Your settings live in `settings.json` in the project folder (listed in `.gitignore`, so `git pull` never overwrites it). Start from the example:
+Your settings live in `settings.json` in the project folder, next to `credentials.json` (also listed in `.gitignore`). Start from the example:
 
 ```bash
 cp settings.example.esp32.json settings.json
@@ -99,7 +99,7 @@ Enter your Wi-Fi name and password and set your timezone (the example is Central
 
 ### 7. Create main.py
 
-MicroPython runs `main.py` whenever the board gets power. Create it in the project folder (listed in `.gitignore`, like `settings.json`):
+MicroPython runs `main.py` whenever the board gets power. Create it in the project folder (also listed in `.gitignore`):
 
 ```bash
 nano main.py
@@ -118,7 +118,7 @@ main()
 make esp32-install
 ```
 
-This compiles the code (`make esp32`), installs the OLED driver (`ssd1306`), copies the code, your `main.py` and your `settings.json` to the board, and restarts it. From now on the board doesn't need your computer anymore. The `requests` and `ntptime` modules the code also needs are part of the MicroPython firmware.
+This compiles the code (`make esp32`), installs the OLED driver (`ssd1306`), copies the code and your `main.py`, `settings.json` and `credentials.json` to the board, and restarts it. From now on the board doesn't need your computer anymore. The `requests` and `ntptime` modules the code also needs are part of the MicroPython firmware.
 
 The board gets compiled `.mpy` files, not the `.py` files: compiling them on the board takes memory that MicroPython never gives back, and then the encrypted connection to Claude fails with `Network error: 16`.
 
@@ -144,7 +144,15 @@ make esp32-update
 
 This replaces the code and `main.py` on the board with the ones from your project folder and restarts it. It removes the old code first, so no outdated files stay on the board (MicroPython would load a leftover `.py` file instead of the new `.mpy`). Your `settings.json` and `credentials.json` on the board stay untouched.
 
-**Coming from a version where `main.py` held your settings?** Move your settings from it into `settings.json` (step 6), replace its content with the code from step 7, then run `make esp32-update` and `make esp32-settings`.
+### New credentials
+
+The board refreshes the token itself and keeps the new one in its own `credentials.json`, so the copy in your project folder is outdated after the first refresh. Only copy it again when the display shows `HTTP 401` (see [Sharing the login](README.md#sharing-the-login-between-board-and-computer)): save fresh credentials in `credentials.json` (step 5, with `"expiresAt"` set to `0`), then run
+
+```bash
+make esp32-credentials
+```
+
+and [log in again on your computer](README.md#log-in-again-on-your-computer).
 
 ## Configuration
 
@@ -191,7 +199,8 @@ See also the [common problems](README.md#troubleshooting) in the main README. To
 | `settings.json is missing` / `The settings need a 'wifi' section` | Settings not on the board | Create `settings.json` (step 6) and run `make esp32-settings` |
 | `SettingsError: Section '…'` | Misspelled setting or invalid value | Fix `settings.json` (see [Configuration](#configuration)) and run `make esp32-settings` |
 | `ImportError: no module named 'ssd1306'` | Driver missing | `mpremote mip install ssd1306` |
-| `No credentials` | File missing | Copy `credentials.json` to the board (step 5) |
+| `No credentials` | File missing | Save `credentials.json` in the project folder (step 5) and run `make esp32-credentials` |
+| `HTTP 401` | Old credentials copied to the board | See [New credentials](#new-credentials) |
 | `Wi-Fi error` / `Wrong password` | Wrong password in `settings.json` | Fix it and run `make esp32-settings` |
 | `Wi-Fi error` / `Not found` | Wrong name, 5 GHz network, or weak signal | Use a 2.4 GHz network; check the name; try `"tx_power": 8.5` |
 | `Loading...` forever, log keeps saying `Connecting to Wi-Fi` | Many Super Mini boards have a weak antenna design that fails at full transmit power | `"tx_power": 8.5` in the `wifi` section |

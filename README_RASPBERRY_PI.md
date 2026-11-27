@@ -57,23 +57,23 @@ The display runs with the system-wide `python3`, so the Python packages are inst
 
 Follow [Get your Claude login credentials](README.md#get-your-claude-login-credentials) in the main README.
 
-### 5. Put the credentials on the Pi
+### 5. Save the credentials in the project folder
 
 ```bash
-mkdir -p ~/.usage-monitor
-nano ~/.usage-monitor/credentials.json
-chmod 600 ~/.usage-monitor/credentials.json
+cd ~/ai-usage-monitor
+nano credentials.json
+chmod 600 credentials.json
 ```
 
-Paste the credentials and change the value after `"expiresAt":` to `0`.
+Paste the credentials and change the value after `"expiresAt":` to `0`. The display keeps this file up to date when it refreshes the token. It is listed in `.gitignore`, so it never ends up in Git and `git pull` never touches it.
 
 ### 6. Create your settings (optional)
 
-Without settings, the display uses the default for everything. To change something, create `~/.usage-monitor/settings.json` next to the credentials, e.g. to turn the picture upside down:
+Without settings, the display uses the default for everything. To change something, create `settings.json` in the project folder, next to `credentials.json` (also listed in `.gitignore`), e.g. to turn the picture upside down:
 
 ```bash
-cp ~/ai-usage-monitor/settings.example.pi.json ~/.usage-monitor/settings.json
-nano ~/.usage-monitor/settings.json
+cp settings.example.pi.json settings.json
+nano settings.json
 ```
 
 ```json
@@ -86,10 +86,9 @@ All settings and their defaults are listed under [Configuration](#configuration)
 
 ### 7. Create main.py
 
-`main.py` starts the display. Create it in the project folder (listed in `.gitignore`, so `git pull` never overwrites it):
+`main.py` starts the display. Create it in the project folder (also listed in `.gitignore`):
 
 ```bash
-cd ~/ai-usage-monitor
 nano main.py
 ```
 
@@ -152,13 +151,11 @@ git pull
 sudo systemctl restart usage-monitor
 ```
 
-Your `~/.usage-monitor/settings.json` and `credentials.json` stay untouched.
-
-**Coming from a version with `show_my_usage.py`?** Move your settings from it into `~/.usage-monitor/settings.json` (step 6), create `main.py` (step 7) and delete `show_my_usage.py`, change `ExecStart` in the service file to `/usr/bin/python3 main.py` (step 8), then run `sudo systemctl daemon-reload` and restart the service.
+Your `main.py`, `settings.json` and `credentials.json` stay untouched.
 
 ## Configuration
 
-All settings are in `~/.usage-monitor/settings.json` (step 6). Restart the service after a change: `sudo systemctl restart usage-monitor`.
+All settings are in `settings.json` in the project folder (step 6). Restart the service after a change: `sudo systemctl restart usage-monitor`.
 
 Each section holds the settings of one part: `display` (the table below), and `timezone`, `api` and `monitor` (see the [main README](README.md#configuration)). Leave out what you don't change. A misspelled setting stops the start with a message in the log (`journalctl -u usage-monitor`).
 
@@ -182,6 +179,6 @@ See also the [common problems](README.md#troubleshooting) in the main README.
 | Display / log | Likely cause | Fix |
 |---|---|---|
 | Stays black | Wrong controller, SPI off or wiring | Set `"controller": "ssd1306"` in the `display` section; check `ls /dev/spidev*`; recheck wiring and 3.3 V |
-| `No credentials` | File missing | Create `~/.usage-monitor/credentials.json` (step 5) |
-| `SettingsError: …` | Misspelled setting, invalid value or invalid JSON | Fix `~/.usage-monitor/settings.json` (see [Configuration](#configuration)) |
+| `No credentials` | File missing | Create `credentials.json` in the project folder (step 5) |
+| `SettingsError: …` | Misspelled setting, invalid value or invalid JSON | Fix `settings.json` (see [Configuration](#configuration)) |
 | `Loading...` forever | No network | Check Wi-Fi; see `journalctl -u usage-monitor` |

@@ -67,7 +67,7 @@ class FakeServer:
 class FakeApi:
     """Replacement for ClaudeApi: returns or raises the given results in turn."""
 
-    def __init__(self, *results, credentials_file="~/.usage-monitor/credentials.json"):
+    def __init__(self, *results, credentials_file="credentials.json"):
         self.results = list(results)
         self.credentials_file = credentials_file
 

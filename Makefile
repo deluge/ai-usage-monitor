@@ -1,26 +1,27 @@
-.PHONY: help correct check tests coverage coverage-html devinstall esp32 esp32-install esp32-update esp32-copy esp32-settings esp32-log clean
+.PHONY: help correct check tests coverage coverage-html devinstall esp32 esp32-install esp32-update esp32-copy esp32-settings esp32-credentials esp32-log clean
 
+# The ESP32 tools from your PATH, otherwise the ones make devinstall put into .venv.
 # Set MPREMOTE="mpremote connect /dev/cu.usbmodem1101" if more than one board is connected.
-MPREMOTE ?= mpremote
-# mpy-cross from your PATH, otherwise the one make devinstall put into .venv.
+MPREMOTE ?= $(if $(shell command -v mpremote),mpremote,uv run mpremote)
 MPY_CROSS ?= $(if $(shell command -v mpy-cross),mpy-cross,uv run mpy-cross)
 
 help:
 	@echo "Development:"
-	@echo "  devinstall       - Install all packages required for development into .venv"
-	@echo "  correct          - Format python code with ruff"
-	@echo "  check            - Check python code style without changing files"
-	@echo "  tests            - Run tests (ARGS=\"-k monitor\" passes options to pytest)"
-	@echo "  coverage         - Run tests with coverage enabled"
-	@echo "  coverage-html    - Run tests with coverage html export enabled"
-	@echo "  clean            - Clean build related files"
+	@echo "  devinstall         - Install all packages required for development into .venv"
+	@echo "  correct            - Format python code with ruff"
+	@echo "  check              - Check python code style without changing files"
+	@echo "  tests              - Run tests (ARGS=\"-k monitor\" passes options to pytest)"
+	@echo "  coverage           - Run tests with coverage enabled"
+	@echo "  coverage-html      - Run tests with coverage html export enabled"
+	@echo "  clean              - Clean build related files"
 	@echo ""
 	@echo "ESP32 (see README_ESP32_C3.md):"
-	@echo "  esp32            - Compile the ESP32 code to .mpy files in build/esp32"
-	@echo "  esp32-install    - First install: driver, code, main.py and settings.json"
-	@echo "  esp32-update     - Copy the current code and main.py (keeps settings and credentials)"
-	@echo "  esp32-settings   - Copy settings.json"
-	@echo "  esp32-log        - Restart the board and show its log (Ctrl+] to exit)"
+	@echo "  esp32              - Compile the ESP32 code to .mpy files in build/esp32"
+	@echo "  esp32-install      - First install: driver, code, main.py, settings.json and credentials.json"
+	@echo "  esp32-update       - Copy the current code and main.py (keeps settings and credentials)"
+	@echo "  esp32-settings     - Copy settings.json"
+	@echo "  esp32-credentials  - Copy credentials.json (only fresh ones, see README_ESP32_C3.md)"
+	@echo "  esp32-log          - Restart the board and show its log (Ctrl+] to exit)"
 
 
 correct:
@@ -70,10 +71,15 @@ settings.json:
 	@exit 1
 
 
-esp32-install: esp32 main.py settings.json
+credentials.json:
+	@echo "credentials.json is missing: save your Claude login credentials there (step 5)" >&2
+	@exit 1
+
+
+esp32-install: esp32 main.py settings.json credentials.json
 	$(MPREMOTE) mip install ssd1306
 	$(MAKE) esp32-copy
-	$(MPREMOTE) cp settings.json :settings.json + reset
+	$(MPREMOTE) cp settings.json :settings.json + cp credentials.json :credentials.json + reset
 
 
 esp32-update: esp32 main.py
@@ -81,7 +87,6 @@ esp32-update: esp32 main.py
 	$(MPREMOTE) reset
 
 
-# Removes the old code first: MicroPython would load a leftover .py instead of the new .mpy.
 esp32-copy:
 	-$(MPREMOTE) rm -r :display_usage
 	$(MPREMOTE) cp -r build/esp32/display_usage : + cp main.py :main.py
@@ -89,6 +94,10 @@ esp32-copy:
 
 esp32-settings: settings.json
 	$(MPREMOTE) cp settings.json :settings.json + reset
+
+
+esp32-credentials: credentials.json
+	$(MPREMOTE) cp credentials.json :credentials.json + reset
 
 
 esp32-log:

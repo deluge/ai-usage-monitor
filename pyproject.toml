@@ -24,7 +24,9 @@ testing = [
 ]
 develop = [
 	"ai-usage-monitor[testing]",
+	"esptool>=5.7,<6",  # flashes the MicroPython firmware onto the ESP32
 	"ipdb>=0.13.13,<0.14",
+	"mpremote>=1.29,<1.30",  # copies files to the ESP32 (make esp32-install, esp32-update, ...)
 ]
 
 [tool.pytest.ini_options]
