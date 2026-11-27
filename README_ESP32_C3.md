@@ -24,6 +24,7 @@ You do all of this from your computer, with the ESP32 connected over USB. Your c
 
 - [esptool](https://docs.espressif.com/projects/esptool/) to flash the firmware
 - [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html) to copy files to the board
+- [mpy-cross](https://pypi.org/project/mpy-cross/) to compile the code for the board (`pip install mpy-cross`). Its version should match the MicroPython firmware (check with `mpy-cross --version`)
 
 ### 1. Flash MicroPython
 
@@ -56,11 +57,12 @@ GPIO6, 7 and 10 are the C3's native SPI pins. GPIO2, 8 and 9 stay free on purpos
 git clone https://github.com/deluge/ai-usage-monitor.git ~/ai-usage-monitor
 cd ~/ai-usage-monitor
 
+make esp32
 mpremote mip install ssd1306
-mpremote cp -r display_usage :
+mpremote cp -r build/esp32/display_usage :
 ```
 
-`mip install ssd1306` installs the OLED driver; the `requests` and `ntptime` modules the code also needs are part of the MicroPython firmware. The `display_usage/pizerow/` folder is copied along but never used on the ESP32.
+`make esp32` compiles the code into `.mpy` files in `build/esp32/` (without `display_usage/pizerow/`, which the ESP32 doesn't use). Don't copy the `.py` files instead: compiling them on the board takes memory that MicroPython never gives back, and then the encrypted connection to Claude fails with `Network error: 16`. `mip install ssd1306` installs the OLED driver; the `requests` and `ntptime` modules the code also needs are part of the MicroPython firmware.
 
 ### 4. Get your Claude login credentials
 
@@ -131,10 +133,11 @@ Follow [Log in again on your computer](README.md#log-in-again-on-your-computer) 
 ```bash
 cd ~/ai-usage-monitor
 git pull
-mpremote cp -r display_usage : + reset
+make esp32
+mpremote rm -r :display_usage + cp -r build/esp32/display_usage : + reset
 ```
 
-Your `main.py` and `credentials.json` on the board stay untouched.
+Removing the old `display_usage/` first makes sure no outdated files stay on the board (MicroPython would load a leftover `.py` file instead of the new `.mpy`). Your `main.py` and `credentials.json` on the board stay untouched.
 
 ## Configuration
 
@@ -173,11 +176,14 @@ See also the [common problems](README.md#troubleshooting) in the main README. To
 | Display / log | Likely cause | Fix |
 |---|---|---|
 | Stays black | Wiring, or `main.py` not on the board | Recheck wiring and 3.3 V; check that `mpremote ls` lists `main.py`, `credentials.json`, `display_usage/` and `lib/ssd1306.mpy` |
+| `mpremote: no device found` | Board not detected over USB | Use a USB-C cable with data lines (many only charge) and plug it in directly, not through a hub |
 | `ImportError: no module named 'ssd1306'` | Driver missing | `mpremote mip install ssd1306` (step 3) |
 | `No credentials` | File missing | Copy `credentials.json` to the board (step 5) |
 | `Wi-Fi error` / `Wrong password` | Wrong password in `main.py` | Fix it and copy `main.py` again |
 | `Wi-Fi error` / `Not found` | Wrong name, 5 GHz network, or weak signal | Use a 2.4 GHz network; check the name; try `tx_power=8.5` |
 | `Loading...` forever, log keeps saying `Connecting to Wi-Fi` | Many Super Mini boards have a weak antenna design that fails at full transmit power | `Wifi(..., tx_power=8.5)` |
 | `No network?` / `Network error` in the log | No internet, or the clock sync (NTP) failed | Check your router; the board keeps retrying |
+| `Network error: 16` in the log, after `Clock synced.` | Not enough free memory for the TLS connection, usually because the `.py` files were copied instead of the compiled `.mpy` files | Copy the compiled code (step 3, with `make esp32`); check that `mpremote ls :display_usage` lists only `.mpy` files |
 | `MemoryError` in the log | Not enough free memory for the TLS connection | Reset the board; make sure no other code runs in `main.py` or `boot.py` |
+| Grey vertical streaks below the text | Display controller set up with SSD1306 values | Update the code (see [Updating](#updating)); the ESP32 driver uses the SSD1309 setup of the Pi |
 | esptool can't connect | Board not in download mode | Hold BOOT, press RESET, release BOOT |

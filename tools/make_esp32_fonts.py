@@ -25,6 +25,18 @@ BYTES_PER_LINE = 20
 KERNING_PAIRS_PER_LINE = 25
 KERNING_SHIFTS = (0, -1, -2, 1, -3, 2)
 PADDING = 4  # room for glyphs that reach left of or above the drawing position
+X_OFFSET_BIAS = 128  # GLYPHS stores x offset + 128, as the offset can be negative
+
+
+def glyph_line(char, advance, x_offset, y_offset, width, height, start):
+    """One GLYPHS record as a source line: 7 bytes, the start in DATA as 2 bytes big-endian.
+
+    A bytes object takes far less RAM on the ESP32 than a tuple per character.
+    """
+    record = bytes(
+        (advance, x_offset + X_OFFSET_BIAS, y_offset, width, height, start >> 8, start & 0xFF)
+    )
+    return '    b"' + "".join(f"\\x{byte:02x}" for byte in record) + f'"  # {char!r}'
 
 
 def render_glyph(font, char):
@@ -84,8 +96,7 @@ def write_module(font_path, size):
     for char in chars:
         advance, x_offset, y_offset, width, height, glyph_data = render_glyph(font, char)
         glyph_lines.append(
-            f"    ({advance}, {x_offset}, {y_offset}, {width}, {height}, {len(data)}),"
-            f"  # {char!r}"
+            glyph_line(char, advance, x_offset, y_offset, width, height, len(data))
         )
         data += glyph_data
 
@@ -109,7 +120,8 @@ def write_module(font_path, size):
             "# DejaVu fonts license: https://dejavu-fonts.github.io/License.html\n"
             "\n"
             f"FIRST = {FIRST}\n"
-            "# (advance, x offset, y offset, width, height, start in DATA) per character\n"
+            "# 7 bytes per character: advance, x offset + 128, y offset, width, height,\n"
+            "# start in DATA (2 bytes, big-endian)\n"
             "GLYPHS = (\n" + "\n".join(glyph_lines) + "\n)\n"
             "DATA = (\n" + "\n".join(data_lines) + "\n)\n"
             "# (first char, second char, shift + 48) per pair, sorted\n"

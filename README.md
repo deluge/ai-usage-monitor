@@ -45,7 +45,7 @@ Claude Code shows your limits with `/usage`. Behind that is an **undocumented** 
 | `display_usage/utils.py` | Shared helpers: logging, time and `Timezone`, reset time formatting |
 | `display_usage/errors.py` | Exceptions shared by the modules above |
 | `display_usage/pizerow/display.py` | `Oled_m154_7p` for the Raspberry Pi (luma.oled, TrueType fonts) |
-| `display_usage/esp32/display.py` | `Oled_m154_7p` for the ESP32 (MicroPython's `ssd1306` driver) |
+| `display_usage/esp32/display.py` | `Oled_m154_7p` for the ESP32 (MicroPython's `ssd1306` driver with the SSD1309 setup the Pi uses) |
 | `display_usage/esp32/wifi.py` | `Wifi`: Wi-Fi connection and clock sync on the ESP32 |
 | `display_usage/esp32/font.py` | `BitmapFont`: draws the bitmap fonts below |
 | `display_usage/esp32/dejavu_sans_*.py` | DejaVu Sans as bitmap fonts for the ESP32 (generated) |
@@ -163,9 +163,11 @@ Both boards run the same code. Everything in `display_usage/` runs on the Pi (Py
 - `UsageMonitor` runs one loop that fetches and redraws; on the ESP32 it also keeps the `Wifi` connected.
 - `BaseDisplay` draws the whole screen with five primitives (`clear`, `show`, `text`, `textlength`, `rectangle`). Each board's `Oled_m154_7p` implements them for its display driver. To support another display or board, write such a subclass.
 
+The ESP32 has little memory: once the code is loaded and Wi-Fi is up, only about 100 KB are left, and each TLS connection needs most of it. MicroPython takes more memory for its own heap when that runs full and never gives it back, so the code on the board must stay small. That's why the ESP32 gets precompiled `.mpy` files (`make esp32`) and the fonts store their tables as `bytes` instead of tuples.
+
 ### ESP32 fonts
 
-MicroPython can't read TTF fonts, so the ESP32 uses DejaVu Sans pre-rendered as bitmaps (`display_usage/esp32/dejavu_sans_*.py`). They are rendered with Pillow the same way the Pi draws text, so both displays show the same pixels. The sizes come from `BaseDisplay.FONT_SIZE` and `SMALL_FONT_SIZE`. To regenerate them after changing those, download `DejaVuSans.ttf` and run from the project folder:
+MicroPython can't read TTF fonts, so the ESP32 uses DejaVu Sans pre-rendered as bitmaps (`display_usage/esp32/dejavu_sans_*.py`). They are rendered with Pillow the same way the Pi draws text, so both displays show the same pixels. The glyph table is packed into `bytes` (7 bytes per character), which takes far less of the ESP32's memory than a tuple per character. The sizes come from `BaseDisplay.FONT_SIZE` and `SMALL_FONT_SIZE`. To regenerate them after changing those, download `DejaVuSans.ttf` and run from the project folder:
 
 ```bash
 uv run --no-project --with pillow python -B -m tools.make_esp32_fonts /path/to/DejaVuSans.ttf

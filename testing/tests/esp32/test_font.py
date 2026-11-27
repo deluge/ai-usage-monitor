@@ -25,14 +25,36 @@ def kerning_pairs(module):
 @pytest.mark.parametrize("module", [dejavu_sans_10, dejavu_sans_11])
 def test_font_modules(module):
     assert module.FIRST == 32
-    assert len(module.GLYPHS) == 127 - 32
+    assert len(module.GLYPHS) == (127 - 32) * 7
+    assert isinstance(module.GLYPHS, bytes), "a tuple per character costs too much RAM"
     assert len(module.KERNING) % 3 == 0
     pairs = [(first, second) for first, second, _ in kerning_pairs(module)]
     assert pairs == sorted(pairs), "kern() needs KERNING sorted for its binary search"
 
 
 def test_glyph(font):
-    assert font.glyph("A") == dejavu_sans_11.GLYPHS[ord("A") - 32]
+    record = ord("A") - 32
+    advance, x_offset, y_offset, width, height, start_high, start_low = dejavu_sans_11.GLYPHS[
+        record * 7 : record * 7 + 7
+    ]
+
+    assert font.glyph("A") == (
+        advance,
+        x_offset - 128,
+        y_offset,
+        width,
+        height,
+        start_high << 8 | start_low,
+    )
+
+
+def test_glyph_negative_x_offset_and_large_start(font):
+    glyphs = [font.glyph(chr(code)) for code in range(32, 127)]
+
+    assert min(x_offset for _, x_offset, *_ in glyphs) < 0
+    assert max(start for *_, start in glyphs) > 255
+    starts = [start for *_, start in glyphs]
+    assert starts == sorted(starts)
 
 
 @pytest.mark.parametrize("char", ["ä", "\n", "€"])

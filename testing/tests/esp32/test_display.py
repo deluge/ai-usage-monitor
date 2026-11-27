@@ -17,7 +17,9 @@ def display_module(micropython_modules):
 
 @pytest.fixture
 def oled(display_module):
-    return display_module.Oled_m154_7p()
+    oled = display_module.Oled_m154_7p()
+    oled.device.shown = 0  # ignore the clear screen of the init sequence
+    return oled
 
 
 def pixels_in(oled, left, top, right, bottom):
@@ -34,6 +36,15 @@ def test_init(oled):
     assert (device.dc, device.res, device.cs) == (Pin(5), Pin(4), Pin(10))
     assert device.settings == {"contrast": 200, "rotate": False}
     assert oled.timezone.utc_offset is None
+
+
+def test_init_sends_ssd1309_sequence(display_module):
+    device = display_module.Oled_m154_7p().device
+
+    assert device.commands == list(display_module.SSD1309_INIT)
+    assert 0xAD not in device.commands  # SSD1306 IREF command causes streaks on an SSD1309
+    assert device.pixels == set()
+    assert device.shown == 1
 
 
 def test_init_with_options(display_module):

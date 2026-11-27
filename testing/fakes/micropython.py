@@ -62,6 +62,14 @@ class SSD1306_SPI(FrameBuffer):
         self.spi, self.dc, self.res, self.cs = spi, dc, res, cs
         self.settings = {}
         self.shown = 0
+        self.commands = []
+        self.init_display()
+
+    def init_display(self):
+        self.commands.append("default init")
+
+    def write_cmd(self, command):
+        self.commands.append(command)
 
     def contrast(self, level):
         self.settings["contrast"] = level
