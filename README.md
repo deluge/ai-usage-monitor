@@ -15,7 +15,7 @@ This README covers everything both boards have in common. The board-specific ste
 | Raspberry Pi Zero W / Zero 2 W | Python 3 on Raspberry Pi OS, started by systemd | [README_RASPBERRY_PI.md](README_RASPBERRY_PI.md) |
 | ESP32-C3 Super Mini | MicroPython, starts on power-up | [README_ESP32_C3.md](README_ESP32_C3.md) |
 
-The Pi version is easier to debug over SSH and has a 3D-printable case. The ESP32 is cheaper, smaller, uses less power and is ready a few seconds after you plug it in.
+The Pi version is easier to debug over SSH. The ESP32 is cheaper, smaller, uses less power and is ready a few seconds after you plug it in.
 
 ## What it shows
 
@@ -60,6 +60,7 @@ Claude Code shows your limits with `/usage`. Behind that is an **undocumented** 
 | `pyproject.toml` / `uv.lock` | Development tools and settings (managed with [uv](https://docs.astral.sh/uv/)); the boards don't use them |
 | `3Dprint/pizero_oled154_case.scad` | OpenSCAD source of the Pi case (adjustable) |
 | `3Dprint/pizero_oled154_case.stl` | Ready-to-print Pi case (body and bottom plate) |
+| `3Dprint/esp32c3_oled154_wedge.scad` / `.stl` | ESP32 case, a smaller version of the Pi case ([details](README_ESP32_C3.md#case)) |
 
 ## The display
 

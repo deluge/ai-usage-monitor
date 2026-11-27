@@ -11,7 +11,31 @@ The ESP32 runs [MicroPython](https://micropython.org/) and the same code as the 
 - USB-C cable (with data lines) and a USB power supply
 - 7 female-to-female jumper wires (or soldered header)
 
-There is no 3D-printable case for the ESP32 yet; the [Pi case](README_RASPBERRY_PI.md#case) doesn't have mounts or a port opening for it.
+For the case (optional):
+
+- 3D printer
+- 4× M2 self-tapping screws (display)
+- Short jumper wires (10 cm), the case has little room for longer ones
+
+## Case
+
+The [`3Dprint`](3Dprint/) folder contains a 3D-printable desk case for the ESP32 (`esp32c3_oled154_wedge.scad` / `.stl`). It's a smaller version of the [Pi case](README_RASPBERRY_PI.md#case): the display leans back 35°, the ESP32 lies flat on the bottom plate behind it, with its USB-C port in the back wall. With the default settings it is about 52 × 51 × 46 mm (W × D × H); the depth comes from the Dupont plugs on the pin headers, which stand about 17 mm tall.
+
+![ESP32 case body with USB-C opening and display window, bottom plate with ESP32 holder and snap clips](docs/displays/oled_m154_7p/esp32_case1.png)
+
+![Inside of the ESP32 case body: display mount with screw posts, USB-C opening in the back wall; bottom plate with ESP32 holder](docs/displays/oled_m154_7p/esp32_case2.png)
+
+The ESP32 drops into a small holder on the bottom plate (the Super Mini has no mounting holes; add a drop of hot glue if it sits loose). The `.stl` file has both parts laid out ready to print, no supports needed: the body prints upside down, the bottom plate flat. The display is screwed in from behind with four M2 self-tapping screws, then the plate is pressed on until the two snap clips on its left and right click into the body. To open the case, pull the plate off firmly: the hooks are angled so they let go.
+
+Open the `.scad` file in [OpenSCAD](https://openscad.org/) to adjust it (Window → Customizer):
+
+- `chip_up`: set it to `false` if the header pins on your ESP32 point out of the bottom (soldered for a breadboard). The board is then held upside down, so the pins still point up.
+- `esp_plug_h` / `disp_plug_h`: the height of the plugs. With wires soldered straight to the boards, set both to about `3` and the case gets about 10 mm shallower.
+- `face_angle`: how far the display leans back.
+- `clip_nub` / `clip_t`: how tight the snap clips hold. A bigger `clip_nub` holds tighter, a thinner `clip_t` snaps in more easily; `clips = false` leaves them out.
+- `part = "section"` shows the assembled case cut in half, with the boards and the space for the plugs, to check that everything fits.
+
+OpenSCAD prints the resulting size in its console.
 
 ## Differences from the Pi version
 
