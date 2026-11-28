@@ -1,5 +1,8 @@
 # AI Usage Monitor
 
+[![CI](https://github.com/deluge/ai-usage-monitor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/deluge/ai-usage-monitor/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/github/deluge/ai-usage-monitor/branch/main/graph/badge.svg)](https://codecov.io/github/deluge/ai-usage-monitor)
+
 I built a small desk display for my Claude usage limits using a **1.54" OLED display (oled_m154_7p, 7-pin SPI, 128×64)**, driven either by a **Raspberry Pi Zero W** or an **ESP32-C3 Super Mini**. Once the board starts and joins my Wi-Fi, it automatically shows my **current** (5-hour) and **weekly** usage, each with a progress bar and the time when it resets. No keyboard, monitor or browser needed.
 
 ![Display preview: loading screen and usage screen](docs/preview.png)

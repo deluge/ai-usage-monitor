@@ -109,4 +109,4 @@ clean:
 	rm -fr dist/
 	rm -fr *.egg-info
 	rm -fr htmlcov/
-	rm -f .coverage
+	rm -f .coverage coverage.xml

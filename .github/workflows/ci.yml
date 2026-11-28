@@ -28,6 +28,9 @@ jobs:
 
   tests:
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write  # for the coverage comment
     steps:
       - uses: actions/checkout@v7
 
@@ -42,7 +45,20 @@ jobs:
         run: uv sync --locked --extra testing
 
       - name: Run tests
-        run: make coverage
+        run: make coverage ARGS="--cov-report=term --cov-report=xml"
+
+      - name: Comment coverage on pull request
+        if: github.event_name == 'pull_request'
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-xml-coverage-path: coverage.xml
+
+      - name: Upload results to Codecov
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: deluge/ai-usage-monitor
 
   # The tests run with CPython; this catches code that MicroPython can't compile.
   esp32:
